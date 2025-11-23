@@ -84,6 +84,29 @@
             loadConfessions();
         });
 
+        // Delete All Button Logic
+        const deleteBtn = document.getElementById('delete-all-btn');
+        if (deleteBtn) {
+            // Show only for priests
+            if (state.session.role === 'priest') {
+                deleteBtn.style.display = 'block';
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    if (confirm('Are you sure you want to delete ALL confessions? This cannot be undone.')) {
+                        try {
+                            const res = await fetchJSON('php/api/delete_all.php', { method: 'POST' });
+                            alert(res.message);
+                            loadConfessions();
+                        } catch (e) {
+                            alert('Failed to delete confessions.');
+                        }
+                    }
+                });
+            } else {
+                deleteBtn.style.display = 'none';
+            }
+        }
+
         els.conversationClose?.addEventListener('click', hideModal);
         els.conversationModal?.addEventListener('click', (e) => {
             if (e.target === els.conversationModal) hideModal();

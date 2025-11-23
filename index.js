@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 modalBody.querySelectorAll('form').forEach((form) => {
                     const action = form.getAttribute('action');
-                    const redirect = form.dataset.tabForm === 'login' ? 'php/dashboard.php' : null;
+                    const redirect = form.dataset.tabForm === 'login' ? 'index.html' : null;
                     form.addEventListener('submit', (e) => handleAuthSubmit(e, action, redirect));
                 });
             }

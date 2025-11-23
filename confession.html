@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confession | Luminous</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="index.js" defer></script>
+    <script src="js/confession.js" defer></script>
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <!-- User Welcome (Hidden by default) -->
+        <div id="user-welcome" class="user-welcome"
+            style="display:none; color: #5e4533; font-weight: bold; font-size: 14px;">
+            Welcome, <span id="username-display"></span>
+            <a href="#" id="logout-link" style="margin-left: 10px; font-size: 12px; color: #8c3333;">(Logout)</a>
+        </div>
+
+        <!-- Login Control UI -->
+        <a href="#" class="login-link" data-key="login" id="login-btn">
+            <svg class="login-icon" viewBox="0 0 24 24">
+                <path
+                    d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+            </svg>
+            Member Login
+        </a>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-bg-img"></div>
+        <div class="header-inner">
+            <div class="logo-area">
+                <!-- SVG Definition for Gold Gradient (Hidden but referenced) -->
+                <svg width="0" height="0" style="position:absolute">
+                    <defs>
+                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#fff8db;stop-opacity:1" />
+                            <stop offset="40%" style="stop-color:#e6d2a0;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#c9a55c;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#fcf3d1;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                <!-- New Vector Crest -->
+                <svg class="cross-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Shield Backing -->
+                    <path d="M50 95 C 20 80, 10 40, 10 10 L 90 10 C 90 40, 80 80, 50 95 Z" fill="#3e2b1e"
+                        stroke="#5c4635" stroke-width="2" />
+                    <!-- Cross Shape -->
+                    <path d="M42 20 L58 20 L58 40 L85 40 L85 55 L58 55 L58 85 L42 85 L42 55 L15 55 L15 40 L42 40 Z" />
+                    <!-- Inner Detail -->
+                    <rect x="48" y="25" width="4" height="55" fill="#3e2b1e" opacity="0.5" />
+                    <rect x="20" y="45" width="60" height="4" fill="#3e2b1e" opacity="0.5" />
+                </svg>
+
+                <div class="site-title">
+                    <h1>Luminous</h1>
+                    <span>Of The Holy Cross</span>
+                </div>
+            </div>
+
+            <!-- Header Online Confession Badge -->
+            <a href="#" class="confession-badge" data-key="confession">
+                <span>ONLINE<br>CONFESSION</span>
+                <small>Click to Enter</small>
+            </a>
+
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-inner">
+            <ul class="nav-list">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#" data-key="confession">Online Confession</a></li>
+                <li><a href="#" data-key="donation">Donation</a></li>
+                <li><a href="#" data-key="prayer">Prayers Request</a></li>
+                <li><a href="#" data-key="volunteer">Volunteering Work</a></li>
+                <li><a href="#" data-key="gallery">Gallery</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content Area (Paper) -->
+    <div class="paper-container">
+
+        <!-- Dashboard Content Embedded Here -->
+        <main class="dashboard-shell" style="padding: 20px;">
+            <header class="page-header" style="text-align: center; margin-bottom: 30px;">
+                <div>
+                    <p class="pretitle" id="user-role-display">Loading...</p>
+                    <h1 id="user-name-display-main" style="font-family: 'Cinzel', serif; color: #3e2b1e;">Welcome</h1>
+                    <p id="role-description" style="font-style: italic; color: #5e4533;">...</p>
+                </div>
+            </header>
+
+            <div style="text-align:right; margin-bottom:20px; position:relative;">
+                <details style="display:inline-block;">
+                    <summary style="font-size:13px; color:#a08c6a; cursor:pointer;">advanced</summary>
+                    <label style="font-size:13px; color:#5e4533; display:block; margin-top:8px;">
+                        <input type="checkbox" id="debug-toggle">
+                        Show cryptographic debug data
+                    </label>
+                </details>
+            </div>
+
+            <div id="alert-area"></div>
+
+            <!-- User: Submit Confession -->
+            <section class="card" id="confess-section"
+                style="display:none; margin-bottom: 30px; background: rgba(255,255,255,0.6); padding: 20px; border: 1px solid #d4c5b0;">
+                <h2
+                    style="font-family: 'Cinzel', serif; color: #8c3333; border-bottom: 1px solid #d4c5b0; padding-bottom: 10px; margin-bottom: 15px;">
+                    Write a Confession</h2>
+                <form id="confess-form">
+                    <label style="display:block; margin-bottom:10px; font-weight:bold; color:#3e2b1e;">
+                        Choose Priest
+                        <select id="priest-select" required
+                            style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5; font-family: 'PT Sans', sans-serif;">
+                            <option value="">Loading priests...</option>
+                        </select>
+                    </label>
+                    <label style="display:block; margin-bottom:10px; font-weight:bold; color:#3e2b1e;">
+                        Subject
+                        <input type="text" name="subject" required
+                            style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;">
+                    </label>
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #3e2b1e;">
+                        Message
+                        <textarea name="message" rows="6" required
+                            style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #8c7348; background: #fffdf5; font-family: 'PT Sans', sans-serif;"></textarea>
+                    </label>
+                    <button type="submit" class="login-btn" style="width: auto; padding: 10px 30px;">Send
+                        Securely</button>
+                </form>
+            </section>
+
+            <!-- Stats (Priest) -->
+            <section class="stats-grid" id="stats-section" style="display:none; margin-bottom: 30px;">
+                <div class="stat-card">
+                    <p class="stat-label">Total Confessions</p>
+                    <p class="stat-value" id="stat-total">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Awaiting Reply</p>
+                    <p class="stat-value" id="stat-awaiting">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Replied</p>
+                    <p class="stat-value" id="stat-replied">0</p>
+                </div>
+            </section>
+
+            <section class="chat-sidebar" id="penitent-list" style="display:none; margin-bottom: 30px;">
+                <h3>Penitents</h3>
+                <ul id="penitent-items"></ul>
+            </section>
+
+            <!-- Conversations + Sidebar -->
+            <!-- <div class="chat-layout"> -->
+
+            <section class="card chat-card"
+                style="background: rgba(255,255,255,0.6); padding: 20px; border: 1px solid #d4c5b0;">
+                <h2 id="list-title"
+                    style="font-family: 'Cinzel', serif; color: #3e2b1e; border-bottom: 1px solid #d4c5b0; padding-bottom: 10px; margin-bottom: 15px;">
+                    Confession History</h2>
+                <div id="confession-list" class="confession-list">
+                    <p>Loading confessions...</p>
+                </div>
+                <form id="reply-form" style="display:none; margin-top:20px;">
+                    <p class="muted" id="reply-target" style="margin-bottom:10px;">Select a conversation to reply.
+                    </p>
+                    <label style="display:block; margin-bottom:10px; font-weight:bold; color:#3e2b1e;">
+                        Reply
+                        <textarea name="message" rows="4" required
+                            style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;"></textarea>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; color:#5e4533; font-size:14px;">
+                        <input type="checkbox" name="end_confession">
+                        Close conversation after this reply
+                    </label>
+                    <button type="submit" class="login-btn">Send Reply</button>
+                </form>
+            </section>
+            <!-- </div> -->
+        </main>
+
+        <div class="separator"></div>
+
+        <section class="verse-block">
+            <p class="verse-text">"If we confess our sins, he is faithful and just and will forgive us our sins and
+                purify us from all unrighteousness."</p>
+            <span class="verse-ref">— 1 John 1:9</span>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>Copyright © 2011 Luminous of The Holy Cross</p>
+        <p style="margin-top: 8px; font-size: 11px; opacity: 0.5; font-style: italic;">Disclaimer: This is a
+            cryptography project by UAJY Students 2025/2026</p>
+    </footer>
+
+    <!-- Penitent Conversation Modal -->
+    <div class="modal-overlay" id="conversationModal">
+        <div class="modal-content">
+            <div class="modal-close" id="conversationClose">×</div>
+            <h2 class="modal-title" id="conversationTitle">Penitent</h2>
+            <div class="modal-body" id="conversationBody">...</div>
+            <form id="modal-reply-form" style="display:none; margin-top:15px;">
+                <label style="display:block; font-weight:bold; color:#3e2b1e; margin-bottom:6px;">
+                    Reply
+                    <textarea name="reply_message" rows="4" required
+                        style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;"></textarea>
+                </label>
+                <label style="display:flex; align-items:center; gap:0.5rem; color:#5e4533; font-size:14px;">
+                    <input type="checkbox" name="end_confession">
+                    Close conversation after this reply
+                </label>
+                <button type="submit" class="login-btn">Send Reply</button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,41 @@
+:root {
+    --font-display: "Cinzel", serif;
+    --font-body: "PT Sans", sans-serif;
+    --font-decor: "Uncial Antiqua", cursive;
+    --color-bg-deep: #2a1d15;
+    --color-gold: #c9a55c;
+    --color-parchment: #fff7e6;
+    --color-brown: #4d3324;
+    --color-muted: #6c5845;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--color-bg-deep);
+    color: #2b1d12;
+    margin: 0;
+}
+
+a {
+    color: var(--color-gold);
+}
+
+button,
+.button {
+    background: #7a4b1d;
+    color: #fff5e6;
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+}
+
+.card {
+    background: var(--color-parchment);
+    border-radius: 12px;
+    border: 1px solid rgba(74, 51, 33, 0.2);
+    padding: 1.5rem;
+    box-shadow: 0 12px 24px rgba(60, 36, 21, 0.1);
+}

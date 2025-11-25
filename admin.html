@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Luminous</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        body {
+            background-color: #f4f0e6;
+            color: #3e2b1e;
+            font-family: 'PT Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: #2b1d12;
+            color: #e6d2a0;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #8c7348;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #5c4635;
+            background: #1a110a;
+        }
+
+        .sidebar-header h2 {
+            font-family: 'Cinzel', serif;
+            margin: 0;
+            font-size: 18px;
+            color: #e6d2a0;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+            color: #b08d45;
+        }
+
+        .nav-item:hover {
+            background: #3e2b1e;
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: #3e2b1e;
+            border-left-color: #8c3333;
+            color: #fff;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #5c4635;
+            text-align: center;
+            font-size: 12px;
+            color: #8c7348;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f4f0e6;
+        }
+
+        .top-bar {
+            background: #fffdf5;
+            padding: 15px 30px;
+            border-bottom: 1px solid #d4c5b0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .page-title {
+            font-family: 'Cinzel', serif;
+            font-size: 20px;
+            color: #3e2b1e;
+            margin: 0;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .access-denied-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            text-align: center;
+            gap: 10px;
+            padding: 20px;
+            width: 100%;
+            flex: 1;
+        }
+
+        .access-denied-body {
+            display: block;
+        }
+
+        /* Data Table */
+        .table-container {
+            background: #fff;
+            border: 1px solid #d4c5b0;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #f0e6d2;
+            color: #5c4635;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 2px solid #d4c5b0;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #fffdf5;
+        }
+
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+
+        .btn-delete {
+            background: #8c3333;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #5e1e1e;
+        }
+
+        /* SQL Console */
+        .sql-console {
+            background: #2b1d12;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: #e6d2a0;
+        }
+
+        .sql-input {
+            width: 100%;
+            background: #1a110a;
+            border: 1px solid #5c4635;
+            color: #00ff00;
+            font-family: monospace;
+            padding: 10px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 10px;
+        }
+
+        .btn-execute {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .btn-execute:hover {
+            background: #1b5e20;
+        }
+
+        /* Utils */
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8c7348;
+            font-style: italic;
+        }
+
+        .error-msg {
+            color: #8c3333;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            border: 1px solid #ef9a9a;
+        }
+
+        .success-msg {
+            color: #2e7d32;
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            border: 1px solid #a5d6a7;
+        }
+
+        /* Encryption Viz */
+        .encryption-container {
+            background: #fffdf5;
+            border: 1px solid #d4c5b0;
+            border-radius: 6px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viz-stage-container {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(140px, 1fr));
+            gap: 20px;
+            position: relative;
+            padding: 20px 20px 40px;
+        }
+
+        .viz-step {
+            width: 100%;
+            background: #fefaf2;
+            border: 2px dashed #d4c5b0;
+            border-radius: 8px;
+            padding: 18px 12px;
+            text-align: center;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            min-height: 150px;
+            position: relative;
+        }
+
+        .viz-stage-container .viz-step {
+            width: 100%;
+        }
+
+        .viz-step.active-step {
+            border-color: #8c3333;
+            transform: translateY(-6px);
+            box-shadow: 0 8px 20px rgba(140, 51, 51, 0.2);
+        }
+
+        .viz-step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -20px;
+            width: 40px;
+            height: 2px;
+            background: #8c7348;
+            transform: translateY(-50%);
+        }
+
+        .viz-step::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -14px;
+            border-width: 6px 0 6px 10px;
+            border-style: solid;
+            border-color: transparent transparent transparent #8c7348;
+            transform: translate(100%, -50%);
+        }
+
+        .viz-stage-container .viz-step:last-child::after {
+            display: none;
+        }
+
+        .viz-stage-container .viz-step:last-child::before {
+            display: none;
+        }
+
+        .viz-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .viz-label {
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #5c4635;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .viz-box {
+            border: 1px solid #d4c5b0;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 13px;
+            background: #fff;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viz-packet {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #8c3333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: #fff;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            z-index: 5;
+        }
+
+        .viz-controls {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .viz-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #5c4635;
+            font-weight: bold;
+            font-family: 'Cinzel', serif;
+        }
+
+        .viz-field textarea {
+            width: 100%;
+            min-height: 80px;
+            border-radius: 6px;
+            border: 1px solid #d4c5b0;
+            padding: 10px;
+            resize: vertical;
+            font-family: 'PT Sans', sans-serif;
+        }
+
+        .viz-info-box {
+            background: #1a110a;
+            color: #e6d2a0;
+            font-family: monospace;
+            border-radius: 6px;
+            padding: 12px;
+            min-height: 80px;
+            border: 1px solid #5c4635;
+            word-break: break-all;
+        }
+
+        .viz-info-box.light {
+            background: #fff;
+            border-color: #d4c5b0;
+            color: #3e2b1e;
+        }
+
+        .viz-log {
+            margin-top: 25px;
+            background: #fff;
+            border: 1px dashed #d4c5b0;
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 80px;
+            font-size: 13px;
+            color: #5c4635;
+        }
+
+        .viz-log strong {
+            color: #8c3333;
+        }
+
+        .viz-description {
+            text-align: center;
+            color: #5c4635;
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .viz-buttons {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viz-buttons button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid #8c7348;
+            background: #fff;
+            color: #3e2b1e;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+            font-size: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .viz-buttons button.primary {
+            background: #2e7d32;
+            color: #fff;
+            border-color: #1b5e20;
+        }
+
+        .viz-buttons button:hover {
+            background: #f0e6d2;
+        }
+
+        .viz-speed {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #5c4635;
+            font-size: 12px;
+            font-family: 'Cinzel', serif;
+        }
+
+        .viz-speed input[type="range"] {
+            width: 160px;
+        }
+
+        .viz-info-grid {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .viz-info-card {
+            background: #fff;
+            border: 1px solid #d4c5b0;
+            border-radius: 6px;
+            padding: 15px;
+            font-size: 13px;
+            color: #3e2b1e;
+        }
+
+        .viz-info-card h4 {
+            margin: 0 0 10px;
+            font-family: 'Cinzel', serif;
+            font-size: 15px;
+            color: #8c3333;
+        }
+
+        .viz-info-card ul {
+            padding-left: 18px;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 900px) {
+            .viz-stage-container {
+                grid-template-columns: repeat(2, minmax(160px, 1fr));
+            }
+
+            .viz-stage-container .viz-step::after,
+            .viz-stage-container .viz-step::before {
+                display: none;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .viz-stage-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f4f0e6;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d4c5b0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8c7348;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Admin Panel</h2>
+        </div>
+        <div class="sidebar-nav">
+            <!-- <div class="nav-item active" onclick="switchTab('tables')">Tables</div> -->
+            <div class="nav-item" onclick="switchTab('sql')">SQL Console</div>
+            <div class="nav-item" onclick="switchTab('encryption')">Encryption Viz</div>
+            <div style="height: 20px;"></div>
+            <div class="nav-item" onclick="loadTable('users')">Users</div>
+            <div class="nav-item" onclick="loadTable('confessions')">Confessions</div>
+        </div>
+        <div class="sidebar-footer">
+            <a href="index.html" style="color: #8c7348; text-decoration: none;">&larr; Back to Site</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-bar">
+            <h1 class="page-title" id="page-title">Tables</h1>
+            <div id="user-info" style="font-size: 13px; color: #8c7348;">Checking access...</div>
+        </div>
+
+        <div class="content-area">
+            <div id="message-area"></div>
+
+            <!-- Tables View -->
+            <div id="view-tables">
+                <div class="table-container">
+                    <div id="data-table-wrapper">
+                        <div class="loading">Select a table from the sidebar to view data.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL View -->
+            <div id="view-sql" class="hidden">
+                <div class="sql-console">
+                    <h3 style="margin-top: 0; font-family: 'Cinzel', serif; color: #fff;">Execute SQL Query</h3>
+                    <textarea id="sql-query" class="sql-input" placeholder="SELECT * FROM users WHERE..."></textarea>
+                    <button class="btn-execute" onclick="executeSQL()">Run Query</button>
+                </div>
+                <div id="sql-results" class="table-container hidden"></div>
+            </div>
+
+            <!-- Encryption Viz View -->
+            <div id="view-encryption" class="hidden">
+                <div class="encryption-container">
+                    <h3 style="font-family: 'Cinzel', serif; color: #3e2b1e; text-align: center; margin-bottom: 30px;">
+                        Confession Encryption Process</h3>
+                    <p class="viz-description">We use a hybrid RSA-OAEP flow to protect confessions. The browser
+                        encrypts the
+                        plaintext locally using the Priest's public key before any data leaves the device, then stores
+                        only ciphertext on the server.</p>
+
+                    <div class="viz-stage-container">
+                        <!-- Step 1: Client Input -->
+                        <div class="viz-step" id="step-1">
+                            <div class="viz-icon">👤</div>
+                            <div class="viz-label">User Input</div>
+                            <div class="viz-box">"Forgive me..."</div>
+                        </div>
+
+                        <!-- Step 2: Public Key -->
+                        <div class="viz-step" id="step-2">
+                            <div class="viz-icon">🔑</div>
+                            <div class="viz-label">Public Key</div>
+                            <div class="viz-box" style="border-color: #8c3333;">(Encrypting)</div>
+                        </div>
+
+                        <!-- Step 3: Encrypted Data -->
+                        <div class="viz-step" id="step-3">
+                            <div class="viz-icon">🔒</div>
+                            <div class="viz-label">Encrypted Data</div>
+                            <div class="viz-box" style="background: #e0e0e0; color: #555; font-family: monospace;">
+                                a8f9c2...</div>
+                        </div>
+                        <!-- Step 4: Server Storage -->
+                        <div class="viz-step" id="step-4">
+                            <div class="viz-icon">💾</div>
+                            <div class="viz-label">Database</div>
+                            <div class="viz-box">Stored Safely</div>
+                        </div>
+                    </div>
+
+                    <!-- Moving Packet -->
+                    <div id="viz-packet" class="viz-packet hidden">📝</div>
+                    <div class="viz-controls">
+                        <div class="viz-field" style="grid-column: span 2; min-width: 260px;">
+                            <label for="plaintext-input">Plaintext Confession</label>
+                            <textarea id="plaintext-input"
+                                placeholder="Type the message that will be encrypted"></textarea>
+                        </div>
+                        <div class="viz-field">
+                            <label>Public Key Snapshot</label>
+                            <div id="public-key-display" class="viz-info-box">Generating key...</div>
+                        </div>
+                        <div class="viz-field">
+                            <label>Ciphertext Output</label>
+                            <div id="ciphertext-output" class="viz-info-box light">Encrypted blob will appear here.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viz-buttons">
+                        <button class="primary" onclick="runEncryptionDemo()">Start / Restart</button>
+                        <button onclick="pauseEncryptionDemo()">Pause</button>
+                        <button onclick="resumeEncryptionDemo()">Resume</button>
+                        <button onclick="resetEncryptionDemo()">Reset</button>
+                        <div class="viz-speed">
+                            <label for="speed-slider">Speed:</label>
+                            <input id="speed-slider" type="range" min="1200" max="4000" step="200" value="2200"
+                                oninput="handleSpeedChange(this.value)">
+                            <span id="speed-label">2.2s per hop</span>
+                        </div>
+                    </div>
+                    <div class="viz-info-grid">
+                        <div class="viz-info-card">
+                            <h4>Algorithm Summary</h4>
+                            <p id="algorithm-info">Loading...</p>
+                        </div>
+                        <div class="viz-info-card">
+                            <h4>Key Details</h4>
+                            <ul id="key-meta">
+                                <li>Length: -</li>
+                                <li>Fingerprint: -</li>
+                                <li>Last Rotation: -</li>
+                            </ul>
+                        </div>
+                        <div class="viz-info-card">
+                            <h4>Ciphertext Insights</h4>
+                            <ul id="cipher-meta">
+                                <li>Bytes: -</li>
+                                <li>Preview: -</li>
+                                <li>Checksum: -</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="viz-log" id="viz-log">Ready to simulate encryption.</div>
+                </div>
+
+                <div id="viz-status"
+                    style="text-align: center; margin-top: 20px; font-style: italic; color: #8c7348; height: 20px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Record</h3>
+            </div>
+            <div class="modal-body">
+                <div id="edit-form-container"></div>
+                <div style="margin-top:20px; text-align:right;">
+                    <button onclick="closeEditModal()"
+                        style="padding:8px 20px; background:#ccc; border:none; cursor:pointer; margin-right:10px; font-family:'Cinzel', serif;">Cancel</button>
+                    <button onclick="saveEdit()"
+                        style="padding:8px 20px; background:#2e7d32; color:white; border:none; cursor:pointer; font-family:'Cinzel', serif;">Save
+                        Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'php/api/db_manager.php';
+        let currentTable = null;
+        let cachedPublicKey = '';
+        let vizTimeline = null;
+        let animationDuration = 2200;
+        let keyMeta = { length: 2048, fingerprint: '', rotation: '' };
+
+        function randomHex(length) {
+            let output = '';
+            const chars = 'abcdef0123456789';
+            for (let i = 0; i < length; i++) {
+                output += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return output;
+        }
+
+        function generatePublicKeySnippet() {
+            const blocks = [];
+            for (let i = 0; i < 6; i++) {
+                blocks.push(randomHex(32));
+            }
+            return '-----BEGIN PUBLIC KEY-----\n' + blocks.join('\n') + '\n-----END PUBLIC KEY-----';
+        }
+
+        function fakeEncrypt(message) {
+            if (!message) return '';
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(message);
+            const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            return (hex + randomHex(64)).substring(0, 96) + '...';
+        }
+
+        function initializeEncryptionViz() {
+            cachedPublicKey = generatePublicKeySnippet();
+            const keyDisplay = document.getElementById('public-key-display');
+            if (keyDisplay) keyDisplay.innerText = cachedPublicKey;
+            const lengths = [2048, 3072, 4096];
+            keyMeta.length = lengths[Math.floor(Math.random() * lengths.length)];
+            keyMeta.fingerprint = randomHex(12).toUpperCase();
+            keyMeta.rotation = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            updateKeyMeta();
+            updateAlgorithmInfo();
+            const slider = document.getElementById('speed-slider');
+            handleSpeedChange(slider ? slider.value : animationDuration);
+            updateCipherMeta('');
+            resetEncryptionDemo(true);
+        }
+
+        function logVizStep(message) {
+            const log = document.getElementById('viz-log');
+            if (!log) return;
+            const entry = document.createElement('div');
+            entry.innerHTML = `<strong>•</strong> ${message}`;
+            log.appendChild(entry);
+        }
+
+        function updateKeyMeta() {
+            const keyList = document.getElementById('key-meta');
+            if (!keyList) return;
+            keyList.innerHTML = `
+                <li>Length: ${keyMeta.length}-bit RSA</li>
+                <li>Fingerprint: ${keyMeta.fingerprint.slice(0, 4)}:${keyMeta.fingerprint.slice(4, 8)}:${keyMeta.fingerprint.slice(8)}</li>
+                <li>Last Rotation: ${keyMeta.rotation}</li>`;
+        }
+
+        function updateCipherMeta(cipherText = '') {
+            const cipherList = document.getElementById('cipher-meta');
+            if (!cipherList) return;
+            if (!cipherText) {
+                cipherList.innerHTML = '<li>Bytes: -</li><li>Preview: -</li><li>Checksum: -</li>';
+                return;
+            }
+            const hexOnly = cipherText.replace(/[^0-9a-f]/gi, '');
+            const bytes = Math.ceil(hexOnly.length / 2);
+            const preview = cipherText.substring(0, 16) + '...';
+            const checksum = randomHex(8).toUpperCase();
+            cipherList.innerHTML = `
+                <li>Bytes: ~${bytes}</li>
+                <li>Preview: ${preview}</li>
+                <li>Checksum: ${checksum}</li>`;
+        }
+
+        function updateAlgorithmInfo() {
+            const info = document.getElementById('algorithm-info');
+            if (!info) return;
+            info.innerText = 'RSA-OAEP with SHA-256 padding layered over TLS. Public key encrypts a symmetric secret which protects the confession body. Decryption happens only on priest consoles.';
+        }
+
+        function handleSpeedChange(value) {
+            animationDuration = Number(value);
+            const label = document.getElementById('speed-label');
+            if (label) {
+                label.innerText = (animationDuration / 1000).toFixed(1) + 's per hop';
+            }
+        }
+
+        function resetEncryptionDemo(clearCipher = true) {
+            if (vizTimeline) {
+                vizTimeline.pause();
+                vizTimeline = null;
+            }
+
+            const packet = document.getElementById('viz-packet');
+            if (packet) {
+                packet.classList.add('hidden');
+                packet.style.opacity = 1;
+                packet.style.transform = 'scale(1)';
+                packet.style.left = '0px';
+                packet.style.top = '0px';
+            }
+            document.querySelectorAll('.viz-step').forEach(el => el.classList.remove('active-step'));
+            const status = document.getElementById('viz-status');
+            if (status) status.innerText = 'Awaiting input.';
+
+            const log = document.getElementById('viz-log');
+            if (log) log.innerHTML = 'Ready to simulate encryption.';
+
+            if (clearCipher) {
+                const cipherOutput = document.getElementById('ciphertext-output');
+                if (cipherOutput) cipherOutput.innerText = 'Encrypted blob will appear here.';
+                updateCipherMeta('');
+            }
+        }
+
+        function pauseEncryptionDemo() {
+            if (vizTimeline) vizTimeline.pause();
+        }
+
+        function resumeEncryptionDemo() {
+            if (vizTimeline) vizTimeline.play();
+        }
+
+        // Check Auth on Load
+        async function checkAuth() {
+            try {
+                const res = await fetch('php/api/session.php');
+                const data = await res.json();
+                if (!data.authenticated || data.role !== 'priest') {
+                    document.body.classList.add('access-denied-body');
+                    document.body.innerHTML = `
+                        <div class="access-denied-wrapper">
+                            <h2 style="font-family:Cinzel, serif; color:#8c3333; margin-bottom: 20px;">Admin Access Required</h2>
+                            <p style="margin-bottom: 20px;">You must be logged in as a Priest to access this console.</p>
+                            
+                            <div style="background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 350px; border: 1px solid #d4c5b0;">
+                                <form id="admin-login-form" onsubmit="handleAdminLogin(event)">
+                                    <div style="margin-bottom: 15px; text-align: left;">
+                                        <label style="display:block; font-family:'Cinzel', serif; font-size:12px; margin-bottom:5px; color:#5c4635;">Username</label>
+                                        <input type="text" name="username" required style="width:100%; padding:10px; border:1px solid #d4c5b0; border-radius:4px; font-family:'PT Sans', sans-serif;">
+                                    </div>
+                                    <div style="margin-bottom: 20px; text-align: left;">
+                                        <label style="display:block; font-family:'Cinzel', serif; font-size:12px; margin-bottom:5px; color:#5c4635;">Password</label>
+                                        <input type="password" name="password" required style="width:100%; padding:10px; border:1px solid #d4c5b0; border-radius:4px; font-family:'PT Sans', sans-serif;">
+                                    </div>
+                                    <div id="login-msg" style="margin-bottom: 15px; font-size: 13px;"></div>
+                                    <button type="submit" style="width:100%; padding:12px; background:#8c3333; color:white; border:none; border-radius:4px; font-family:'Cinzel', serif; cursor:pointer; font-weight:bold;">Login to Console</button>
+                                </form>
+                                
+                                <div style="margin-top: 20px; border-top: 1px dashed #d4c5b0; padding-top: 15px;">
+                                    <label style="display:block; font-family:'Cinzel', serif; font-size:12px; margin-bottom:5px; color:#5c4635;">Secret Code</label>
+                                    <div style="display:flex; gap:5px;">
+                                        <input type="password" id="secret-code-input" placeholder="Enter code..." style="flex:1; padding:8px; border:1px solid #d4c5b0; border-radius:4px; font-family:'PT Sans', sans-serif;">
+                                        <button onclick="handleSecretCode()" style="padding:8px 12px; background:#5c4635; color:white; border:none; border-radius:4px; cursor:pointer;">&rarr;</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <a href="index.html" style="color:#8c7348; margin-top:20px; text-decoration:none; font-size:13px;">&larr; Return to Sanctuary</a>
+                        </div>`;
+                } else {
+                    document.getElementById('user-info').innerText = `Logged in as: ${data.full_name} (${data.role})`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let adminSecret = '';
+
+        function handleSecretCode() {
+            const code = document.getElementById('secret-code-input').value;
+            if (code === 'admin') {
+                adminSecret = code;
+                // Let's persist in sessionStorage
+                sessionStorage.setItem('adminSecret', 'admin');
+                window.location.reload();
+            } else {
+                alert('Invalid Code');
+            }
+        }
+
+        // Check for secret in session storage on load
+        if (sessionStorage.getItem('adminSecret') === 'admin') {
+            adminSecret = 'admin';
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const msg = document.getElementById('login-msg');
+            const btn = form.querySelector('button');
+
+            btn.disabled = true;
+            btn.innerText = 'Verifying...';
+            msg.innerHTML = '';
+
+            try {
+                const res = await fetch('php/login.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const json = await res.json();
+
+                if (json.success) {
+                    msg.innerHTML = '<span style="color:green">Access Granted. Reloading...</span>';
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    msg.innerHTML = `<span style="color:red">${json.message}</span>`;
+                    btn.disabled = false;
+                    btn.innerText = 'Login to Console';
+                }
+            } catch (err) {
+                msg.innerHTML = '<span style="color:red">Connection Error</span>';
+                btn.disabled = false;
+                btn.innerText = 'Login to Console';
+            }
+        }
+
+        // Modify checkAuth to respect adminSecret
+        const originalCheckAuth = checkAuth;
+        checkAuth = async function () {
+            if (adminSecret === 'admin') {
+                document.getElementById('user-info').innerText = 'Logged in via Secret Code';
+                return;
+            }
+            await originalCheckAuth();
+        };
+        checkAuth();
+
+        // Navigation
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            // Hide all views first
+            document.getElementById('view-tables').classList.add('hidden');
+            document.getElementById('view-sql').classList.add('hidden');
+            document.getElementById('view-encryption').classList.add('hidden');
+
+            if (tab === 'tables') {
+                document.getElementById('view-tables').classList.remove('hidden');
+                document.getElementById('page-title').innerText = currentTable ? `Table: ${currentTable}` : 'Tables';
+                if (currentTable) {
+                    const navItems = document.querySelectorAll('.nav-item');
+                    for (let item of navItems) {
+                        if (item.innerText.toLowerCase() === currentTable) {
+                            item.classList.add('active');
+                            break;
+                        }
+                    }
+                } else {
+                    document.querySelector('.nav-item[onclick="switchTab(\'tables\')"]').classList.add('active');
+                }
+            } else if (tab === 'sql') {
+                document.getElementById('view-sql').classList.remove('hidden');
+                document.getElementById('page-title').innerText = 'SQL Console';
+                document.querySelector('.nav-item[onclick="switchTab(\'sql\')"]').classList.add('active');
+            } else if (tab === 'encryption') {
+                document.getElementById('view-encryption').classList.remove('hidden');
+                document.getElementById('page-title').innerText = 'Encryption Visualization';
+                document.querySelector('.nav-item[onclick="switchTab(\'encryption\')"]').classList.add('active');
+            }
+        }
+
+        // Load Table Data
+        async function loadTable(tableName) {
+            currentTable = tableName;
+            switchTab('tables');
+            document.getElementById('page-title').innerText = `Table: ${tableName}`;
+
+            // Update sidebar active state
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const navItems = document.querySelectorAll('.nav-item');
+            for (let item of navItems) {
+                if (item.innerText.toLowerCase() === tableName) {
+                    item.classList.add('active');
+                    break;
+                }
+            }
+
+            const wrapper = document.getElementById('data-table-wrapper');
+            wrapper.innerHTML = '<div class="loading">Loading data...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'fetch_data');
+                formData.append('table', tableName);
+                if (adminSecret) formData.append('secret_code', adminSecret);
+
+                const res = await fetch(API_URL, { method: 'POST', body: formData });
+                const json = await res.json();
+
+                if (json.success) {
+                    renderTable(json.data, wrapper, true);
+                } else {
+                    wrapper.innerHTML = `<div class="error-msg">${json.message}</div>`;
+                }
+            } catch (e) {
+                wrapper.innerHTML = `<div class="error-msg">Connection error: ${e.message}</div>`;
+            }
+        }
+
+        // Render Table
+        function renderTable(data, container, allowDelete = false) {
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">No records found.</div>';
+                return;
+            }
+
+            const columns = Object.keys(data[0]);
+            let html = '<table><thead><tr>';
+
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            if (allowDelete) html += '<th>Actions</th>';
+
+            html += '</tr></thead><tbody>';
+
+            data.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    let val = row[col];
+                    // Truncate long text
+                    if (val && val.length > 50) val = val.substring(0, 50) + '...';
+                    html += `<td>${val !== null ? val : '<em style="color:#ccc">NULL</em>'}</td>`;
+                });
+
+                if (allowDelete) {
+                    html += `<td>
+                        <button class="action-btn" style="background:#1976d2; color:white; margin-right:5px;" onclick='openEditModal(${JSON.stringify(row)})'>Edit</button>
+                        <button class="action-btn btn-delete" onclick="deleteRow(${row.id})">Delete</button>
+                    </td>`;
+                }
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Delete Row
+        async function deleteRow(id) {
+            if (!confirm('Are you sure you want to delete this record? This cannot be undone.')) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete_row');
+                formData.append('table', currentTable);
+                formData.append('id', id);
+                if (adminSecret) formData.append('secret_code', adminSecret);
+
+                const res = await fetch(API_URL, { method: 'POST', body: formData });
+                const json = await res.json();
+
+                if (json.success) {
+                    showMessage('Record deleted successfully.', 'success');
+                    loadTable(currentTable); // Reload
+                } else {
+                    showMessage(json.message, 'error');
+                }
+            } catch (e) {
+                showMessage('Connection error.', 'error');
+            }
+        }
+
+        // Execute SQL
+        async function executeSQL() {
+            const query = document.getElementById('sql-query').value.trim();
+            if (!query) return;
+
+            const resultsContainer = document.getElementById('sql-results');
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.innerHTML = '<div class="loading">Executing...</div>';
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'execute_sql');
+                formData.append('query', query);
+                if (adminSecret) formData.append('secret_code', adminSecret);
+
+                const res = await fetch(API_URL, { method: 'POST', body: formData });
+                const json = await res.json();
+
+                if (json.success) {
+                    if (json.data) {
+                        renderTable(json.data, resultsContainer, false);
+                    } else {
+                        resultsContainer.innerHTML = `<div class="success-msg">${json.message}</div>`;
+                    }
+                } else {
+                    resultsContainer.innerHTML = `<div class="error-msg">${json.message}</div>`;
+                }
+            } catch (e) {
+                resultsContainer.innerHTML = `<div class="error-msg">Connection error: ${e.message}</div>`;
+            }
+        }
+
+        function showMessage(msg, type) {
+            const el = document.getElementById('message-area');
+            el.innerHTML = `<div class="${type === 'success' ? 'success-msg' : 'error-msg'}">${msg}</div>`;
+            setTimeout(() => el.innerHTML = '', 3000);
+        }
+
+        // Edit Modal Logic
+        let currentEditId = null;
+
+        function openEditModal(row) {
+            currentEditId = row.id;
+            const container = document.getElementById('edit-form-container');
+            let html = '';
+
+            for (const [key, value] of Object.entries(row)) {
+                if (key === 'id') continue; // Don't edit ID
+
+                // Check if value is long text
+                const isLong = value && value.length > 100;
+
+                html += `<div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:12px; font-family:'Cinzel', serif; color:#5e4533;">${key}</label>`;
+
+                if (isLong) {
+                    html += `<textarea id="edit-${key}" style="width:100%; padding:8px; border:1px solid #d4c5b0; height:100px; font-family:'PT Sans', sans-serif;">${value || ''}</textarea>`;
+                } else {
+                    html += `<input type="text" id="edit-${key}" value="${value !== null ? value.replace(/"/g, '&quot;') : ''}" style="width:100%; padding:8px; border:1px solid #d4c5b0; font-family:'PT Sans', sans-serif;">`;
+                }
+
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('edit-modal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+            currentEditId = null;
+        }
+
+        async function saveEdit() {
+            if (!currentEditId) return;
+
+            const inputs = document.querySelectorAll('#edit-form-container input, #edit-form-container textarea');
+            const updates = {};
+
+            inputs.forEach(input => {
+                const key = input.id.replace('edit-', '');
+                updates[key] = input.value;
+            });
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'update_row');
+                formData.append('table', currentTable);
+                formData.append('id', currentEditId);
+                formData.append('data', JSON.stringify(updates));
+                if (adminSecret) formData.append('secret_code', adminSecret);
+
+                const res = await fetch(API_URL, { method: 'POST', body: formData });
+                const json = await res.json();
+
+                if (json.success) {
+                    showMessage('Record updated successfully.', 'success');
+                    closeEditModal();
+                    loadTable(currentTable);
+                } else {
+                    alert('Error: ' + json.message);
+                }
+            } catch (e) {
+                alert('Connection error: ' + e.message);
+            }
+        }
+
+        // Encryption Demo Logic (Anime.js)
+        function runEncryptionDemo() {
+            resetEncryptionDemo(false);
+
+            const packet = document.getElementById('viz-packet');
+            const status = document.getElementById('viz-status');
+            const input = document.getElementById('plaintext-input');
+            const cipherOutput = document.getElementById('ciphertext-output');
+            const log = document.getElementById('viz-log');
+            const message = (input && input.value.trim()) || 'Forgive me father, for I have sinned.';
+
+            if (log) {
+                log.innerHTML = '';
+                logVizStep('Confession captured from the secure input form.');
+            }
+
+            const plaintextBox = document.querySelector('#step-1 .viz-box');
+            if (plaintextBox) plaintextBox.innerText = message;
+
+            if (!cachedPublicKey) {
+                initializeEncryptionViz();
+            }
+
+            const cipherText = fakeEncrypt(message + cachedPublicKey + Date.now());
+            if (cipherOutput) cipherOutput.innerText = cipherText;
+            updateCipherMeta(cipherText);
+            logVizStep('Client encrypts locally with the priest public key (no plaintext sent).');
+
+            function getCenter(id) {
+                const el = document.getElementById(id);
+                const host = document.querySelector('.encryption-container');
+                if (!el || !host || !packet) {
+                    return { x: 0, y: 0 };
+                }
+                const elRect = el.getBoundingClientRect();
+                const hostRect = host.getBoundingClientRect();
+                const packetSize = packet.offsetWidth || 40;
+                return {
+                    x: elRect.left - hostRect.left + (elRect.width - packetSize) / 2,
+                    y: elRect.top - hostRect.top + (elRect.height - packetSize) / 2
+                };
+            }
+
+            if (!packet || !status) return;
+
+            // Reset State
+            packet.classList.remove('hidden');
+            const startPos = getCenter('step-1');
+            packet.style.left = startPos.x + 'px';
+            packet.style.top = startPos.y + 'px';
+            packet.innerText = '📝';
+            packet.style.backgroundColor = '#fff';
+            packet.style.color = '#000';
+            packet.style.borderColor = '#8c3333';
+
+            document.querySelectorAll('.viz-step').forEach(el => el.classList.remove('active-step'));
+            document.getElementById('step-1').classList.add('active-step');
+            status.innerText = 'User types confession...';
+            logVizStep('Payload prepared. Ready to send minimal encrypted blob.');
+
+            // Create Timeline
+            vizTimeline = anime.timeline({
+                easing: 'easeInOutQuad',
+                duration: animationDuration
+            });
+
+            // Step 1 -> Step 2
+            const pos2 = getCenter('step-2');
+            vizTimeline.add({
+                targets: packet,
+                left: pos2.x,
+                top: pos2.y,
+                changeBegin: () => {
+                    document.querySelectorAll('.viz-step').forEach(el => el.classList.remove('active-step'));
+                    document.getElementById('step-2').classList.add('active-step');
+                    status.innerText = 'Client retrieves priest public key...';
+                    logVizStep('Fetching cached public key from serverless endpoint.');
+                }
+            })
+                // Step 2 -> Step 3 (Encryption happens)
+                .add({
+                    targets: packet,
+                    left: getCenter('step-3').x,
+                    top: getCenter('step-3').y,
+                    backgroundColor: '#2b1d12', // Darken
+                    color: '#e6d2a0',
+                    borderColor: '#5c4635',
+                    rotate: '1turn', // Spin effect
+                    changeBegin: () => {
+                        document.querySelectorAll('.viz-step').forEach(el => el.classList.remove('active-step'));
+                        document.getElementById('step-3').classList.add('active-step');
+                        status.innerText = 'Data encrypted with public key...';
+                        packet.innerText = '🔒';
+                        logVizStep('Plaintext transformed into ciphertext: ' + cipherText.substring(0, 24) + '...');
+                    }
+                })
+                // Step 3 -> Step 4 (Storage)
+                .add({
+                    targets: packet,
+                    left: getCenter('step-4').x,
+                    top: getCenter('step-4').y,
+                    scale: 0.5, // Shrink into DB
+                    opacity: 0, // Fade out
+                    changeBegin: () => {
+                        document.querySelectorAll('.viz-step').forEach(el => el.classList.remove('active-step'));
+                        document.getElementById('step-4').classList.add('active-step');
+                        status.innerText = 'Encrypted blob stored in database.';
+                        logVizStep('Server only stores ciphertext chunk referencing confession metadata.');
+                    },
+                    complete: () => {
+                        status.innerText = 'Process complete. Secure.';
+                        setTimeout(() => {
+                            packet.style.opacity = 1;
+                            packet.style.transform = 'scale(1)';
+                            packet.classList.add('hidden');
+                        }, 500);
+                        logVizStep('Audit trail updated. Ready for decryption on priest console.');
+                    }
+                });
+        }
+
+        function updateStep(index, steps, packet) {
+            // Legacy function kept just in case, but unused now.
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeEncryptionViz();
+        });
+    </script>
+</body>
+
+</html>

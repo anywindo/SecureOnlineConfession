@@ -11,7 +11,11 @@ PHP 8.2 / MySQL demo app that showcases the four foundational cryptography servi
 ## Setup
 1. Start MySQL from XAMPP and create the schema:
    ```bash
-   mysql -h 127.0.0.1 -u root < db_kripto_confession.sql
+   mysql -h 127.0.0.1 -u root < schema.sql
+   ```
+   For existing databases, run the incremental migration to add role/reply columns:
+   ```bash
+   mysql -h 127.0.0.1 -u root < schema_v2.sql
    ```
 2. Adjust credentials or the global AES key in `db.php` if your environment differs.
 3. Place this project inside `htdocs/project` (already structured) and access via `http://localhost/project/php/index.php`.

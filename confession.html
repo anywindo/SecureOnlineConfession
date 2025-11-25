@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confession | Luminous</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="manifest" href="assets/favicon/site.webmanifest">
+    <link rel="shortcut icon" href="assets/favicon/favicon.ico">
     <link rel="stylesheet" href="styles.css">
     <script src="index.js" defer></script>
     <script src="js/confession.js" defer></script>
@@ -13,14 +18,12 @@
 <body>
 
     <div class="top-bar">
-        <!-- User Welcome (Hidden by default) -->
         <div id="user-welcome" class="user-welcome"
             style="display:none; color: #5e4533; font-weight: bold; font-size: 14px;">
             Welcome, <span id="username-display"></span>
             <a href="#" id="logout-link" style="margin-left: 10px; font-size: 12px; color: #8c3333;">(Logout)</a>
         </div>
 
-        <!-- Login Control UI -->
         <a href="#" class="login-link" data-key="login" id="login-btn">
             <svg class="login-icon" viewBox="0 0 24 24">
                 <path
@@ -35,7 +38,6 @@
         <div class="header-bg-img"></div>
         <div class="header-inner">
             <div class="logo-area">
-                <!-- SVG Definition for Gold Gradient (Hidden but referenced) -->
                 <svg width="0" height="0" style="position:absolute">
                     <defs>
                         <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -47,14 +49,10 @@
                     </defs>
                 </svg>
 
-                <!-- New Vector Crest -->
                 <svg class="cross-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Shield Backing -->
                     <path d="M50 95 C 20 80, 10 40, 10 10 L 90 10 C 90 40, 80 80, 50 95 Z" fill="#3e2b1e"
                         stroke="#5c4635" stroke-width="2" />
-                    <!-- Cross Shape -->
                     <path d="M42 20 L58 20 L58 40 L85 40 L85 55 L58 55 L58 85 L42 85 L42 55 L15 55 L15 40 L42 40 Z" />
-                    <!-- Inner Detail -->
                     <rect x="48" y="25" width="4" height="55" fill="#3e2b1e" opacity="0.5" />
                     <rect x="20" y="45" width="60" height="4" fill="#3e2b1e" opacity="0.5" />
                 </svg>
@@ -65,7 +63,6 @@
                 </div>
             </div>
 
-            <!-- Header Online Confession Badge -->
             <a href="#" class="confession-badge" data-key="confession">
                 <span>ONLINE<br>CONFESSION</span>
                 <small>Click to Enter</small>
@@ -88,10 +85,8 @@
         </div>
     </nav>
 
-    <!-- Main Content Area (Paper) -->
     <div class="paper-container">
 
-        <!-- Dashboard Content Embedded Here -->
         <main class="dashboard-shell" style="padding: 20px;">
             <header class="page-header" style="text-align: center; margin-bottom: 30px;">
                 <div>
@@ -167,8 +162,6 @@
                 <ul id="penitent-items"></ul>
             </section>
 
-            <!-- Conversations + Sidebar -->
-            <!-- <div class="chat-layout"> -->
 
             <section class="card chat-card"
                 style="background: rgba(255,255,255,0.6); padding: 20px; border: 1px solid #d4c5b0;">

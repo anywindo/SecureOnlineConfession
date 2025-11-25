@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Luminous</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+    <link rel="manifest" href="assets/favicon/site.webmanifest">
+    <link rel="shortcut icon" href="assets/favicon/favicon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/profile.js" defer></script>
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <div id="user-welcome" class="user-welcome"
+            style="display:flex; align-items:center; gap:10px; color:#5e4533; font-weight:bold; font-size:14px;">
+            Welcome, <span id="username-display"></span>
+            <a href="#" id="logout-link" style="font-size: 12px; color: #8c3333;">(Logout)</a>
+        </div>
+        <a href="index.html" class="profile-back-link" style="margin-left:auto;">&#8592; Back to Home</a>
+    </div>
+
+    <header>
+        <div class="header-bg-img"></div>
+        <div class="header-inner">
+            <div class="logo-area">
+                <svg width="0" height="0" style="position:absolute">
+                    <defs>
+                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#fff8db;stop-opacity:1" />
+                            <stop offset="40%" style="stop-color:#e6d2a0;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#c9a55c;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#fcf3d1;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                <svg class="cross-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 95 C 20 80, 10 40, 10 10 L 90 10 C 90 40, 80 80, 50 95 Z" fill="#3e2b1e"
+                        stroke="#5c4635" stroke-width="2" />
+                    <path d="M42 20 L58 20 L58 40 L85 40 L85 55 L58 55 L58 85 L42 85 L42 55 L15 55 L15 40 L42 40 Z" />
+                    <rect x="48" y="25" width="4" height="55" fill="#3e2b1e" opacity="0.5" />
+                    <rect x="20" y="45" width="60" height="4" fill="#3e2b1e" opacity="0.5" />
+                </svg>
+
+                <div class="site-title">
+                    <h1>Luminous</h1>
+                    <span>Of The Holy Cross</span>
+                </div>
+            </div>
+
+            <div class="confession-badge" style="pointer-events:none;">
+                <span>MY<br>PROFILE</span>
+                <small>Parish Records</small>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-inner">
+            <ul class="nav-list">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="confession.html">Online Confession</a></li>
+                <li><a href="#" class="disabled-link">Donation</a></li>
+                <li><a href="#" class="disabled-link">Prayers Request</a></li>
+                <li><a href="#" class="disabled-link">Volunteering Work</a></li>
+                <li><a href="#" class="disabled-link">Gallery</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="paper-container">
+        <section class="profile-section paper-panel">
+            <div class="profile-card">
+                <div class="profile-card-header">
+                    <h1>Account Ledger</h1>
+                    <p>Maintain your name within the abbey rolls.</p>
+                </div>
+
+                <a href="admin.html" id="admin-panel-link" class="hidden-admin-button"
+                    aria-label="Priest Admin Access">Admin Panel</a>
+
+                <div class="profile-session-info">
+                    Signed in as <strong id="profile-session-name"></strong>
+                </div>
+
+                <form id="profile-form" class="profile-form">
+                    <div class="form-group">
+                        <label for="profile-full-name">Full Name</label>
+                        <input type="text" id="profile-full-name" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profile-username">Username</label>
+                        <input type="text" id="profile-username" class="form-input" disabled>
+                    </div>
+
+                    <div class="form-group readonly-field">
+                        <label>Role</label>
+                        <div id="profile-role" class="readonly-pill"></div>
+                    </div>
+
+                    <hr class="profile-divider">
+
+                    <div class="form-group">
+                        <label for="profile-new-password">New Password <span class="optional">(optional)</span></label>
+                        <input type="password" id="profile-new-password" class="form-input"
+                            placeholder="Enter new password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profile-confirm-password">Confirm Password</label>
+                        <input type="password" id="profile-confirm-password" class="form-input"
+                            placeholder="Confirm new password">
+                    </div>
+
+                    <div id="profile-message" class="form-message"></div>
+
+                    <button type="submit" class="login-btn profile-submit-btn">Save Changes</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

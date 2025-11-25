@@ -113,16 +113,72 @@ document.addEventListener('DOMContentLoaded', () => {
             `
         },
         "donation": {
-            title: "Donation",
-            content: "Your generosity supports our mission and the maintenance of this historic abbey. God bless you."
+            title: "Support Our Mission",
+            content: `
+                <div style="text-align: center; padding: 10px;">
+                    <p style="margin-bottom: 20px; font-style: italic;">"God loves a cheerful giver." - 2 Corinthians 9:7</p>
+                    <p style="margin-bottom: 20px;">Your generosity helps us maintain the abbey, support our charitable works, and preserve our ancient traditions.</p>
+                    
+                    <div class="donation-btn-group" id="donation-amounts">
+                        <button class="donation-btn">$10</button>
+                        <button class="donation-btn">$20</button>
+                        <button class="donation-btn">$50</button>
+                        <button class="donation-btn">Other</button>
+                    </div>
+                    
+                    <input type="number" id="custom-amount" placeholder="Enter amount" style="display:none; width:100%; padding:10px; margin-bottom:20px; border:1px solid #8c7348; background:#fffdf5; font-family:'PT Sans', sans-serif;">
+
+                    <button id="donate-btn" class="login-btn" style="width: 100%;">Proceed to Donation</button>
+                    
+                    <p style="margin-top: 15px; font-size: 12px; color: #8c3333;">* This is a secure transaction.</p>
+                </div>
+            `
         },
         "prayer": {
             title: "Prayer Request",
-            content: "Monks are usually considered the 'Pray-ers,' and we always carry the needs of others before the Lord God and the Throne of Mercy. Submit your intentions here."
+            content: `
+                <div style="padding: 10px;">
+                    <p style="margin-bottom: 20px; font-style: italic; text-align: center;">"Monks are usually considered the 'Pray-ers,' and we always carry the needs of others before the Lord God and the Throne of Mercy."</p>
+                    
+                    <div class="form-group">
+                        <label>Your Name (Optional)</label>
+                        <input type="text" id="prayer-name" class="form-input" placeholder="Enter your name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Your Intention</label>
+                        <textarea id="prayer-intention" class="form-input" rows="4" placeholder="Share your prayer request..." required></textarea>
+                    </div>
+
+                    <button id="submit-prayer-btn" class="login-btn" style="width: 100%;">Submit Prayer Request</button>
+                </div>
+            `
         },
         "volunteer": {
             title: "Volunteering Work",
-            content: "We need help in the gardens and the library. Join us in work and prayer. Contact Father John for opportunities."
+            content: `
+                <div id="volunteer-list-view">
+                    <p style="text-align:center; margin-bottom:20px; font-style:italic;">"Work is prayer." - St. Benedict</p>
+                    
+                    <div class="job-card" style="border: 1px solid #8c7348; padding: 15px; margin-bottom: 15px; background: #fffdf5; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="font-family: 'Cinzel', serif; color: #5e4533; margin-bottom: 5px; font-size: 18px;">Cloister Gardener</h3>
+                        <p style="font-size: 14px; margin-bottom: 10px; color: #333;">Help maintain the serenity and beauty of our sacred gardens.</p>
+                        <button class="donation-btn job-select-btn" data-job="gardener" style="padding: 8px 20px; font-size: 14px; width:auto;">View Details</button>
+                    </div>
+
+                    <div class="job-card" style="border: 1px solid #8c7348; padding: 15px; margin-bottom: 15px; background: #fffdf5; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="font-family: 'Cinzel', serif; color: #5e4533; margin-bottom: 5px; font-size: 18px;">Library Archivist</h3>
+                        <p style="font-size: 14px; margin-bottom: 10px; color: #333;">Assist in preserving and cataloging our ancient manuscripts.</p>
+                        <button class="donation-btn job-select-btn" data-job="archivist" style="padding: 8px 20px; font-size: 14px; width:auto;">View Details</button>
+                    </div>
+
+                    <div class="job-card" style="border: 1px solid #8c7348; padding: 15px; margin-bottom: 15px; background: #fffdf5; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="font-family: 'Cinzel', serif; color: #5e4533; margin-bottom: 5px; font-size: 18px;">Kitchen Aid</h3>
+                        <p style="font-size: 14px; margin-bottom: 10px; color: #333;">Help prepare simple, nourishing meals for the community.</p>
+                        <button class="donation-btn job-select-btn" data-job="kitchen" style="padding: 8px 20px; font-size: 14px; width:auto;">View Details</button>
+                    </div>
+                </div>
+            `
         },
         "gallery": {
             title: "Abbey Gallery",
@@ -424,6 +480,304 @@ document.addEventListener('DOMContentLoaded', () => {
                     const redirect = form.dataset.tabForm === 'login' ? 'index.html' : null;
                     form.addEventListener('submit', (e) => handleAuthSubmit(e, action, redirect));
                 });
+            }
+
+            // Donation Logic
+            if (key === 'donation') {
+                const amountBtns = modalBody.querySelectorAll('.donation-btn');
+                const donateBtn = modalBody.querySelector('#donate-btn');
+                const customAmountInput = modalBody.querySelector('#custom-amount');
+                let selectedAmount = null;
+
+                amountBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // Reset styles
+                        amountBtns.forEach(b => b.classList.remove('selected'));
+                        // Set active style
+                        btn.classList.add('selected');
+
+                        if (btn.innerText === 'Other') {
+                            customAmountInput.style.display = 'block';
+                            customAmountInput.focus();
+                            selectedAmount = null; // Will be read from input
+                        } else {
+                            customAmountInput.style.display = 'none';
+                            selectedAmount = btn.innerText;
+                        }
+                    });
+                });
+
+                if (donateBtn) {
+                    donateBtn.addEventListener('click', () => {
+                        // Validation
+                        let finalAmount = selectedAmount;
+                        if (!finalAmount && customAmountInput.style.display === 'block') {
+                            const val = customAmountInput.value.trim();
+                            if (val) {
+                                finalAmount = '$' + val;
+                            }
+                        }
+
+                        if (!finalAmount) {
+                            alert("Please select or enter a donation amount.");
+                            return;
+                        }
+
+                        // 1. Verification Step
+                        modalBody.innerHTML = `
+                            <div style="text-align:center; padding:40px 20px;">
+                                <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" stroke="#8c7348">
+                                    <g fill="none" fill-rule="evenodd">
+                                        <g transform="translate(1 1)" stroke-width="2">
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="1.5s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="1.5s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="1.5s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="3s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="3s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="3s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="8">
+                                                <animate attributeName="r" begin="0s" dur="1.5s" values="6;1;2;3;4;5;6" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                        </g>
+                                    </g>
+                                </svg>
+                                <p style="margin-top:20px; font-family:'Cinzel', serif; color:#5e4533; font-size:16px;">Verifying Transaction...</p>
+                                <p style="font-size:12px; color:#888;">Please wait while we contact the bank.</p>
+                            </div>
+                        `;
+
+                        // 2. Success Step (after delay)
+                        setTimeout(() => {
+                            modalBody.innerHTML = `
+                                <div style="text-align:center; padding:30px 20px;">
+                                    <div class="checkmark-container">
+                                        <svg class="checkmark-icon" viewBox="0 0 24 24">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <h3 style="font-family:'Cinzel', serif; color:#2e7d32; margin-bottom:10px; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Donation Successful</h3>
+                                    <p style="margin-bottom:20px; font-size:15px;">Thank you for your generous gift of <strong>${finalAmount}</strong>.</p>
+                                    <p style="font-style:italic; color:#5e4533;">"And God is able to bless you abundantly, so that in all things at all times, having all that you need, you will abound in every good work."</p>
+                                    <button id="close-donation-btn" class="login-btn" style="margin-top:25px; width: auto; padding: 10px 40px;">Close</button>
+                                </div>
+                            `;
+
+                            // Re-bind close button
+                            document.getElementById('close-donation-btn').addEventListener('click', () => {
+                                modalOverlay.classList.remove('active');
+                            });
+                        }, 2500);
+                    });
+                }
+            }
+
+            // Prayer Request Logic
+            if (key === 'prayer') {
+                const submitBtn = modalBody.querySelector('#submit-prayer-btn');
+                const intentionInput = modalBody.querySelector('#prayer-intention');
+
+                if (submitBtn) {
+                    submitBtn.addEventListener('click', () => {
+                        const intention = intentionInput.value.trim();
+
+                        if (!intention) {
+                            alert("Please enter your prayer intention.");
+                            return;
+                        }
+
+                        // 1. Sending Step
+                        modalBody.innerHTML = `
+                            <div style="text-align:center; padding:40px 20px;">
+                                <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" stroke="#8c7348">
+                                    <g fill="none" fill-rule="evenodd">
+                                        <g transform="translate(1 1)" stroke-width="2">
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="1.5s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="1.5s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="1.5s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="3s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="3s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="3s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="8">
+                                                <animate attributeName="r" begin="0s" dur="1.5s" values="6;1;2;3;4;5;6" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                        </g>
+                                    </g>
+                                </svg>
+                                <p style="margin-top:20px; font-family:'Cinzel', serif; color:#5e4533; font-size:16px;">Offering your intentions...</p>
+                                <p style="font-size:12px; color:#888;">Please wait.</p>
+                            </div>
+                        `;
+
+                        // 2. Success Step (after delay)
+                        setTimeout(() => {
+                            modalBody.innerHTML = `
+                                <div style="text-align:center; padding:30px 20px;">
+                                    <div class="checkmark-container">
+                                        <svg class="checkmark-icon" viewBox="0 0 24 24">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <h3 style="font-family:'Cinzel', serif; color:#2e7d32; margin-bottom:10px; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Request Received</h3>
+                                    <p style="margin-bottom:20px; font-size:15px;">Your intention has been placed before the altar.</p>
+                                    <p style="font-style:italic; color:#5e4533;">"Cast all your anxiety on Him because He cares for you." - 1 Peter 5:7</p>
+                                    <button id="close-prayer-btn" class="login-btn" style="margin-top:25px; width: auto; padding: 10px 40px;">Close</button>
+                                </div>
+                            `;
+
+                            // Re-bind close button
+                            document.getElementById('close-prayer-btn').addEventListener('click', () => {
+                                modalOverlay.classList.remove('active');
+                            });
+                        }, 2000);
+                    });
+                }
+            }
+
+            // Volunteer Logic
+            if (key === 'volunteer') {
+                const jobData = {
+                    'gardener': {
+                        title: "Cloister Gardener",
+                        desc: "The Cloister Gardener is responsible for the upkeep of the inner sanctuary gardens. Duties include pruning, watering, and planting seasonal flowers.",
+                        time: "Weekends, 7:00 AM - 11:00 AM",
+                        reqs: "Must be physically fit and comfortable working in silence."
+                    },
+                    'archivist': {
+                        title: "Library Archivist",
+                        desc: "Assist the Head Librarian in organizing, cleaning, and digitizing our collection of theological texts and historical records.",
+                        time: "Tuesdays & Thursdays, 1:00 PM - 4:00 PM",
+                        reqs: "Attention to detail and respect for fragile materials."
+                    },
+                    'kitchen': {
+                        title: "Kitchen Aid",
+                        desc: "Support the brothers in the kitchen by chopping vegetables, preparing dough, and cleaning up after the midday meal.",
+                        time: "Daily, 10:00 AM - 1:00 PM",
+                        reqs: "Basic knife skills and hygiene certification preferred."
+                    }
+                };
+
+                const initialContent = modalBody.innerHTML;
+
+                const setupJobListeners = () => {
+                    const jobBtns = modalBody.querySelectorAll('.job-select-btn');
+                    jobBtns.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const jobId = btn.getAttribute('data-job');
+                            const job = jobData[jobId];
+                            showJobForm(job, jobId);
+                        });
+                    });
+                };
+
+                const showJobForm = (job, jobId) => {
+                    modalBody.innerHTML = `
+                        <div class="job-details-view">
+                            <button id="back-to-jobs" style="background:none; border:none; color:#8c3333; cursor:pointer; margin-bottom:15px; font-family:'Cinzel', serif; font-size:14px; display:flex; align-items:center;">
+                                <span style="font-size:18px; margin-right:5px;">&#8592;</span> Back to List
+                            </button>
+                            
+                            <h3 style="font-family:'Cinzel', serif; color:#5e4533; font-size:22px; margin-bottom:10px; border-bottom:1px solid #d4c5b0; padding-bottom:10px;">${job.title}</h3>
+                            
+                            <div style="background:#fffdf5; padding:15px; border:1px solid #d4c5b0; margin-bottom:20px; font-size:14px; color:#333;">
+                                <p style="margin-bottom:10px;"><strong>Description:</strong> ${job.desc}</p>
+                                <p style="margin-bottom:10px;"><strong>Time Commitment:</strong> ${job.time}</p>
+                                <p><strong>Requirements:</strong> ${job.reqs}</p>
+                            </div>
+
+                            <h4 style="font-family:'Cinzel', serif; color:#8c3333; margin-bottom:15px;">Application Form</h4>
+                            
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="vol-name" class="form-input" placeholder="Your name">
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="vol-email" class="form-input" placeholder="Your email">
+                            </div>
+                            <div class="form-group">
+                                <label>Why do you want to join?</label>
+                                <textarea id="vol-reason" class="form-input" rows="3" placeholder="Briefly describe your motivation..."></textarea>
+                            </div>
+
+                            <button id="submit-vol-btn" class="login-btn" style="width: 100%;">Submit Application</button>
+                        </div>
+                    `;
+
+                    // Bind Back Button
+                    document.getElementById('back-to-jobs').addEventListener('click', () => {
+                        modalBody.innerHTML = initialContent;
+                        setupJobListeners(); // Re-bind list buttons
+                    });
+
+                    // Bind Submit Button
+                    document.getElementById('submit-vol-btn').addEventListener('click', () => {
+                        const name = document.getElementById('vol-name').value.trim();
+                        const email = document.getElementById('vol-email').value.trim();
+                        const reason = document.getElementById('vol-reason').value.trim();
+
+                        if (!name || !email || !reason) {
+                            alert("Please complete all fields.");
+                            return;
+                        }
+
+                        // Simulate Submission
+                        modalBody.innerHTML = `
+                            <div style="text-align:center; padding:40px 20px;">
+                                <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" stroke="#8c7348">
+                                    <g fill="none" fill-rule="evenodd">
+                                        <g transform="translate(1 1)" stroke-width="2">
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="1.5s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="1.5s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="1.5s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="6" stroke-opacity="0">
+                                                <animate attributeName="r" begin="3s" dur="3s" values="6;22" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-opacity" begin="3s" dur="3s" values="1;0" calcMode="linear" repeatCount="indefinite" />
+                                                <animate attributeName="stroke-width" begin="3s" dur="3s" values="2;0" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                            <circle cx="22" cy="22" r="8">
+                                                <animate attributeName="r" begin="0s" dur="1.5s" values="6;1;2;3;4;5;6" calcMode="linear" repeatCount="indefinite" />
+                                            </circle>
+                                        </g>
+                                    </g>
+                                </svg>
+                                <p style="margin-top:20px; font-family:'Cinzel', serif; color:#5e4533; font-size:16px;">Submitting Application...</p>
+                            </div>
+                        `;
+
+                        setTimeout(() => {
+                            modalBody.innerHTML = `
+                                <div style="text-align:center; padding:30px 20px;">
+                                    <div class="checkmark-container">
+                                        <svg class="checkmark-icon" viewBox="0 0 24 24">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <h3 style="font-family:'Cinzel', serif; color:#2e7d32; margin-bottom:10px; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Application Sent</h3>
+                                    <p style="margin-bottom:20px; font-size:15px;">Thank you, <strong>${name}</strong>. We have received your interest in the <strong>${job.title}</strong> position.</p>
+                                    <p style="font-style:italic; color:#5e4533;">Father John will review your application and contact you shortly.</p>
+                                    <button id="close-vol-btn" class="login-btn" style="margin-top:25px; width: auto; padding: 10px 40px;">Close</button>
+                                </div>
+                            `;
+
+                            document.getElementById('close-vol-btn').addEventListener('click', () => {
+                                modalOverlay.classList.remove('active');
+                            });
+                        }, 2000);
+                    });
+                };
+
+                // Initialize listeners for the first render
+                setupJobListeners();
             }
 
             // Bind internal links

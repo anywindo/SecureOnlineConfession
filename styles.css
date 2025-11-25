@@ -1809,3 +1809,418 @@ footer p {
     color: #3e2b1e;
     font-weight: bold;
 }
+
+/* --- DONATION MODAL STYLES --- */
+.donation-btn-group {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.donation-btn {
+    padding: 12px 20px;
+    border: 2px solid #5c4635;
+    background: linear-gradient(to bottom, #e6d2a0, #c9a55c);
+    color: #2b1d12;
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        0 4px 6px rgba(0, 0, 0, 0.4),
+        0 0 0 1px #3e2b1e;
+    border-radius: 4px;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.1s;
+    position: relative;
+    min-width: 70px;
+}
+
+.donation-btn:hover {
+    background: linear-gradient(to bottom, #f0e6d2, #d6c49b);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        0 6px 8px rgba(0, 0, 0, 0.5),
+        0 0 0 1px #3e2b1e;
+}
+
+.donation-btn:active {
+    transform: translateY(2px);
+    box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.4),
+        0 0 0 1px #3e2b1e;
+    background: #b08d45;
+}
+
+.donation-btn.selected {
+    background: linear-gradient(to bottom, #8c3333, #5e1e1e);
+    color: #f0e6d2;
+    border-color: #3d1212;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+    box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.5),
+        0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Grungy Checkmark Container */
+.checkmark-container {
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 30% 30%, #e6d2a0, #b08d45);
+    border: 4px solid #5c4635;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 25px;
+    box-shadow:
+        0 10px 20px rgba(0, 0, 0, 0.6),
+        inset 0 2px 5px rgba(255, 255, 255, 0.4),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.checkmark-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    border: 1px dashed #8c7348;
+    margin: 3px;
+    opacity: 0.6;
+}
+
+.checkmark-icon {
+    width: 40px;
+    height: 40px;
+    stroke: #3e2b1e;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.5));
+}
+
+/* --- DASHBOARD STYLES (DB MANAGER) --- */
+.dashboard-body {
+    background-color: #f4f0e6 !important;
+    background-image: none !important;
+    /* Override global leather background */
+    color: #3e2b1e;
+    font-family: 'PT Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    /* Explicitly set row */
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background: #2b1d12;
+    color: #e6d2a0;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid #8c7348;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #5c4635;
+    background: #1a110a;
+}
+
+.sidebar-header h2 {
+    font-family: 'Cinzel', serif;
+    margin: 0;
+    font-size: 18px;
+    color: #e6d2a0;
+    letter-spacing: 1px;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.nav-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    border-left: 3px solid transparent;
+    color: #b08d45;
+}
+
+.nav-item:hover {
+    background: #3e2b1e;
+    color: #fff;
+}
+
+.nav-item.active {
+    background: #3e2b1e;
+    border-left-color: #8c3333;
+    color: #fff;
+}
+
+.sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid #5c4635;
+    text-align: center;
+    font-size: 12px;
+    color: #8c7348;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f4f0e6;
+}
+
+.top-bar-dashboard {
+    background: #fffdf5;
+    padding: 15px 30px;
+    border-bottom: 1px solid #d4c5b0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.page-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    color: #3e2b1e;
+    margin: 0;
+}
+
+.content-area {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+/* Data Table */
+.table-container {
+    background: #fff;
+    border: 1px solid #d4c5b0;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th {
+    background: #f0e6d2;
+    color: #5c4635;
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 2px solid #d4c5b0;
+    white-space: nowrap;
+}
+
+td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    vertical-align: middle;
+}
+
+tr:hover {
+    background: #fffdf5;
+}
+
+.action-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'Cinzel', serif;
+    text-transform: uppercase;
+    transition: background 0.2s;
+}
+
+.btn-delete {
+    background: #8c3333;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #5e1e1e;
+}
+
+/* SQL Console */
+.sql-console {
+    background: #2b1d12;
+    padding: 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    color: #e6d2a0;
+}
+
+.sql-input {
+    width: 100%;
+    background: #1a110a;
+    border: 1px solid #5c4635;
+    color: #00ff00;
+    font-family: monospace;
+    padding: 10px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+    margin-bottom: 10px;
+}
+
+.btn-execute {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    font-family: 'Cinzel', serif;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.btn-execute:hover {
+    background: #1b5e20;
+}
+
+/* Utils */
+.hidden {
+    display: none !important;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #8c7348;
+    font-style: italic;
+}
+
+.error-msg {
+    color: #8c3333;
+    background: #ffebee;
+    padding: 10px;
+    border-radius: 3px;
+    margin-bottom: 15px;
+    border: 1px solid #ef9a9a;
+}
+
+.success-msg {
+    color: #2e7d32;
+    background: #e8f5e9;
+    padding: 10px;
+    border-radius: 3px;
+    margin-bottom: 15px;
+    border: 1px solid #a5d6a7;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f4f0e6;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d4c5b0;
+    border-radius: 4px;
+}
+
+
+/* --- ENCRYPTION VIZ STYLES --- */
+.encryption-container {
+    background: #fff;
+    border: 1px solid #d4c5b0;
+    border-radius: 4px;
+    padding: 40px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.viz-stage-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.viz-step {
+    background: #fffdf5;
+    border: 2px solid #d4c5b0;
+    border-radius: 8px;
+    padding: 20px;
+    width: 150px;
+    text-align: center;
+    transition: all 0.3s;
+    opacity: 0.5;
+}
+
+.viz-step.active-step {
+    opacity: 1;
+    transform: scale(1.1);
+    border-color: #8c3333;
+    box-shadow: 0 5px 15px rgba(140, 51, 51, 0.2);
+}
+
+.viz-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.viz-label {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: #5e4533;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.viz-box {
+    background: #fff;
+    border: 1px dashed #ccc;
+    padding: 5px;
+    font-size: 11px;
+    color: #888;
+    border-radius: 3px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-arrow {
+    font-size: 24px;
+    color: #d4c5b0;
+    font-weight: bold;
+}

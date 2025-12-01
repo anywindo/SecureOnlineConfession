@@ -14,6 +14,8 @@ if (!getenv('OPENSSL_CONF')) {
         '/Applications/XAMPP/xamppfiles/etc/openssl.cnf',
         '/etc/ssl/openssl.cnf',
         '/usr/lib/ssl/openssl.cnf',
+        'C:\xampp\apache\bin\openssl.cnf',
+        'C:\xampp\php\extras\ssl\openssl.cnf',
     ];
 
     foreach ($candidatePaths as $path) {

@@ -21,6 +21,9 @@ SET time_zone = "+00:00";
 -- Database: `db_kripto_confession`
 --
 
+CREATE DATABASE `db_kripto_confession`;
+USE `db_kripto_confession`;
+
 -- --------------------------------------------------------
 
 --

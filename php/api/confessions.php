@@ -114,7 +114,7 @@ try {
             'full_name' => $row['sender_full_name'] ?? $row['username'],
             'created_at' => $row['created_at'],
             'plaintext' => $plaintext,
-            'signature_valid' => verify_signature($row['message_hash'], $row['signature'], $row['public_key']),
+            'signature_valid' => verify_signature(compute_message_hash($plaintext), $row['signature'], $row['public_key']),
             'reply_text' => $row['reply_ciphertext'] && $row['reply_iv'] ? decrypt_data($row['reply_ciphertext'], $row['reply_iv']) : null,
             'reply_at' => $row['reply_at'],
             'recipient_name' => $row['recipient_full_name'],

@@ -7,7 +7,7 @@ header('Content-Type: application/json');
 
 try {
     $pdo = get_pdo();
-    $stmt = $pdo->query("SELECT id, username, full_name, public_key FROM users WHERE role = 'priest' ORDER BY full_name, username");
+    $stmt = $pdo->query("SELECT id, username, full_name FROM users WHERE role = 'priest' ORDER BY full_name, username");
     $priests = $stmt->fetchAll();
     echo json_encode($priests);
 } catch (Throwable $exception) {

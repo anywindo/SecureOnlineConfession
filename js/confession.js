@@ -62,6 +62,12 @@
         debugPanelBody: document.getElementById('debug-panel-body'),
         autoRefreshToggle: document.getElementById('auto-refresh-toggle'),
         autoRefreshInterval: document.getElementById('auto-refresh-interval'),
+        keyBackupPassphrase: document.getElementById('key-backup-passphrase'),
+        exportKeyBtn: document.getElementById('export-key-btn'),
+        importKeyBtn: document.getElementById('import-key-btn'),
+        importKeyInput: document.getElementById('import-key-file'),
+        forgetKeyBtn: document.getElementById('forget-key-btn'),
+        keyBackupStatus: document.getElementById('key-backup-status'),
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -197,6 +203,38 @@
                     }
                 }
             });
+        }
+
+        if (window.ChatCrypto) {
+            if (els.exportKeyBtn) {
+                els.exportKeyBtn.addEventListener('click', () => {
+                    handleKeyExport().catch((error) => {
+                        console.error(error);
+                        setBackupStatus(error.message || 'Export failed.', true);
+                    });
+                });
+            }
+            if (els.importKeyBtn && els.importKeyInput) {
+                els.importKeyBtn.addEventListener('click', () => {
+                    els.importKeyInput.value = '';
+                    els.importKeyInput.click();
+                });
+                els.importKeyInput.addEventListener('change', () => {
+                    handleKeyImport().catch((error) => {
+                        console.error(error);
+                        setBackupStatus(error.message || 'Import failed.', true);
+                    });
+                });
+            }
+            if (els.forgetKeyBtn) {
+                els.forgetKeyBtn.addEventListener('click', () => {
+                    window.ChatCrypto.clearKeys();
+                    setBackupStatus('Local key cleared. Generate or import to continue.', false);
+                    if (els.keyBackupPassphrase) {
+                        els.keyBackupPassphrase.value = '';
+                    }
+                });
+            }
         }
 
         if (els.threadList) {
@@ -688,6 +726,66 @@
         if (state.autoRefreshTimer) {
             clearInterval(state.autoRefreshTimer);
             state.autoRefreshTimer = null;
+        }
+    }
+
+    function getBackupPassphrase() {
+        return els.keyBackupPassphrase?.value || '';
+    }
+
+    function setBackupStatus(message, isError = false) {
+        if (!els.keyBackupStatus) return;
+        els.keyBackupStatus.textContent = message;
+        els.keyBackupStatus.style.color = isError ? '#8c3333' : '#5e4533';
+    }
+
+    function setBackupBusy(busy) {
+        [els.exportKeyBtn, els.importKeyBtn, els.forgetKeyBtn].forEach((btn) => {
+            if (btn) {
+                // eslint-disable-next-line no-param-reassign
+                btn.disabled = busy;
+            }
+        });
+    }
+
+    async function handleKeyExport() {
+        if (!window.ChatCrypto) {
+            throw new Error('Crypto helper unavailable.');
+        }
+        setBackupBusy(true);
+        setBackupStatus('Preparing backup...');
+        try {
+            const backup = await window.ChatCrypto.exportKey({ passphrase: getBackupPassphrase() });
+            const identifier = (state.session?.username || state.session?.full_name || 'user')
+                .replace(/[^a-z0-9_-]+/gi, '_');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `confession-key-${identifier}-${timestamp}.json`;
+            window.ChatCrypto.downloadBackup(backup, filename);
+            setBackupStatus('Key exported. Store the file securely.');
+        } finally {
+            setBackupBusy(false);
+        }
+    }
+
+    async function handleKeyImport() {
+        if (!window.ChatCrypto) {
+            throw new Error('Crypto helper unavailable.');
+        }
+        const file = els.importKeyInput?.files?.[0];
+        if (!file) {
+            return;
+        }
+        setBackupBusy(true);
+        setBackupStatus('Importing backup...');
+        try {
+            const backup = await window.ChatCrypto.readBackupFile(file);
+            await window.ChatCrypto.importKey(backup, { passphrase: getBackupPassphrase(), register: true });
+            setBackupStatus('Key imported and registered. You can now read past sessions.');
+        } finally {
+            setBackupBusy(false);
+            if (els.importKeyInput) {
+                els.importKeyInput.value = '';
+            }
         }
     }
 

@@ -8,6 +8,7 @@
     }
 
     const STORAGE_KEY = 'confession_chat_ecdh_pair';
+    const BACKUP_KDF_ITERATIONS = 120000;
     const ec = new window.elliptic.ec('p256');
 
     const storage = (() => {
@@ -49,6 +50,26 @@
 
     function bytesToHex(bytes) {
         return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function wordArrayToHex(wordArray) {
+        return CryptoJS.enc.Hex.stringify(wordArray);
+    }
+
+    function hexToWordArray(hexString) {
+        if (!hexString) {
+            return CryptoJS.enc.Hex.parse('');
+        }
+        return CryptoJS.enc.Hex.parse(hexString);
+    }
+
+    function deriveBackupKey(passphrase, saltWordArray, iterations = BACKUP_KDF_ITERATIONS) {
+        const effectiveIterations = Number(iterations) > 0 ? Number(iterations) : BACKUP_KDF_ITERATIONS;
+        return CryptoJS.PBKDF2(passphrase, saltWordArray, {
+            keySize: 256 / 32,
+            iterations: effectiveIterations,
+            hasher: CryptoJS.algo.SHA256,
+        });
     }
 
     function deriveSharedSecretHex(privateHex, otherPublicHex) {
@@ -222,6 +243,84 @@
                 hasKeyPair: Boolean(pair),
                 publicKeyPreview: pair ? `${pair.publicKey.slice(0, 10)}…${pair.publicKey.slice(-6)}` : null,
             };
+        },
+        async exportKey(options = {}) {
+            const pair = readStoredPair();
+            if (!pair) {
+                throw new Error('No key pair to export.');
+            }
+            const passphrase = options.passphrase ?? '';
+            const salt = CryptoJS.lib.WordArray.random(16);
+            const iv = CryptoJS.lib.WordArray.random(16);
+            const key = deriveBackupKey(passphrase, salt, BACKUP_KDF_ITERATIONS);
+            const encrypted = CryptoJS.AES.encrypt(pair.privateKey, key, { iv });
+            const backup = {
+                version: 1,
+                cipher: 'AES-256-CBC',
+                kdf: 'PBKDF2-HMAC-SHA256',
+                iterations: BACKUP_KDF_ITERATIONS,
+                publicKey: pair.publicKey,
+                wrappedPrivateKey: encrypted.toString(),
+                iv: wordArrayToHex(iv),
+                salt: wordArrayToHex(salt),
+                createdAt: new Date().toISOString(),
+            };
+            return backup;
+        },
+        async importKey(backup, options = {}) {
+            if (!backup || typeof backup !== 'object') {
+                throw new Error('Invalid backup file.');
+            }
+            const passphrase = options.passphrase ?? '';
+            const register = options.register !== false;
+            const salt = hexToWordArray(backup.salt);
+            const iv = hexToWordArray(backup.iv);
+            const iterations = Number(backup.iterations) > 0 ? Number(backup.iterations) : BACKUP_KDF_ITERATIONS;
+            const key = deriveBackupKey(passphrase, salt, iterations);
+            const decrypted = CryptoJS.AES.decrypt(backup.wrappedPrivateKey, key, { iv }).toString(CryptoJS.enc.Utf8);
+            if (!decrypted) {
+                throw new Error('Failed to decrypt backup. Check your passphrase.');
+            }
+            const pair = {
+                publicKey: backup.publicKey,
+                privateKey: decrypted,
+            };
+            writeStoredPair(pair);
+            if (register) {
+                await this.registerPublicKey(pair.publicKey);
+            }
+            dispatchKeyChange(pair);
+            return pair;
+        },
+        downloadBackup(backup, filename = `confession-key-${Date.now()}.json`) {
+            const data = JSON.stringify(backup, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.setTimeout(() => URL.revokeObjectURL(url), 0);
+        },
+        readBackupFile(file) {
+            if (!(file instanceof File)) {
+                return Promise.reject(new Error('Select a valid backup file.'));
+            }
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const json = JSON.parse(reader.result);
+                        resolve(json);
+                    } catch (error) {
+                        reject(new Error('Backup file is not valid JSON.'));
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read the backup file.'));
+                reader.readAsText(file);
+            });
         },
     };
 

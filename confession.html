@@ -117,6 +117,34 @@
                             If a message shows <em>[Unable to decrypt]</em>, click “Regenerate Secure Key,” then ask your partner to do the same before resending.
                         </p>
                     </div>
+                    <div class="key-backup-panel" style="margin-top:12px; padding:12px; border:1px solid #e0cda5; border-radius:6px; background:#fff7ea;">
+                        <h4 style="margin:0 0 8px; font-size:13px; color:#5e4533; font-family:'Cinzel', serif;">Key Backup</h4>
+                        <p style="margin:0 0 10px; font-size:12px; color:#7a6147;">
+                            Export your private key once and import it on another device to read the same sessions. Keep the file safe.
+                        </p>
+                        <label style="display:block; font-size:12px; color:#5e4533; margin-bottom:6px;">
+                            Optional passphrase
+                            <input type="password" id="key-backup-passphrase"
+                                placeholder="Enter passphrase for export/import"
+                                style="width:100%; margin-top:4px; padding:6px; border:1px solid #d4c5b0; border-radius:4px; background:#fffdf5; font-family:'PT Sans', sans-serif;">
+                        </label>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <button type="button" id="export-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #5e4533; background:#fdf5e6; color:#5e4533; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Export Key
+                            </button>
+                            <button type="button" id="import-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #8c7348; background:#fff; color:#5e4533; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Import Key
+                            </button>
+                            <button type="button" id="forget-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #d87b6b; background:#fff5f2; color:#8c3333; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Forget Key
+                            </button>
+                        </div>
+                        <input type="file" id="import-key-file" accept="application/json" style="display:none;">
+                        <p id="key-backup-status" style="margin:8px 0 0; font-size:11px; color:#7a6147;">No backup activity yet.</p>
+                    </div>
                     <button id="delete-all-btn"
                         style="display:none; margin-top:8px; background:none; border:none; color:#8c3333; font-size:13px; cursor:pointer; text-decoration:underline; padding:0; font-family:inherit;">
                         Delete All Confessions

@@ -368,7 +368,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageEl.classList.add('success');
                 }
                 // Success
+                // Success
                 if (url.includes('login.php')) {
+                    if (json.encrypted_private_key && json.salt) {
+                        try {
+                            const password = form.querySelector('[name="password"]').value;
+                            const salt = json.salt;
+                            
+                            const pwKey = await window.cryptoManager.deriveKeyFromPassword(password, salt);
+                            const encryptedJSON = JSON.parse(json.encrypted_private_key);
+                            
+                            const encPrivKey = await window.cryptoManager.decryptPrivateKey(
+                                encryptedJSON.enc, 
+                                pwKey, 
+                                "RSA-OAEP", 
+                                ["decrypt"]
+                            );
+                            
+                            const signPrivKey = await window.cryptoManager.decryptPrivateKey(
+                                encryptedJSON.sign, 
+                                pwKey, 
+                                "RSA-PSS", 
+                                ["sign"]
+                            );
+                            
+                            const encPrivB64 = await window.cryptoManager.exportPrivateKey(encPrivKey);
+                            const signPrivB64 = await window.cryptoManager.exportPrivateKey(signPrivKey);
+                             
+                            sessionStorage.setItem('enc_priv_key', encPrivB64);
+                            sessionStorage.setItem('sign_priv_key', signPrivB64);
+                        } catch (e) {
+                            console.error("Key derivation failed:", e);
+                        }
+                    }
+
                     if (redirectUrl) {
                         window.location.href = redirectUrl;
                     } else {
@@ -477,12 +510,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 modalBody.querySelectorAll('form').forEach((form) => {
                     const action = form.getAttribute('action');
-                    const redirect = form.dataset.tabForm === 'login' ? 'index.html' : null;
-                    form.addEventListener('submit', (e) => handleAuthSubmit(e, action, redirect));
+                    if (form.dataset.tabForm === 'register') {
+                        form.addEventListener('submit', (e) => handleRegistrationSubmit(e, action));
+                    } else {
+                        const redirect = form.dataset.tabForm === 'login' ? 'index.html' : null;
+                        form.addEventListener('submit', (e) => handleAuthSubmit(e, action, redirect));
+                    }
                 });
             }
 
             // Donation Logic
+            // ... (rest of function)
+
             if (key === 'donation') {
                 const amountBtns = modalBody.querySelectorAll('.donation-btn');
                 const donateBtn = modalBody.querySelector('#donate-btn');
@@ -821,4 +860,66 @@ document.addEventListener('DOMContentLoaded', () => {
             openModal(key);
         });
     });
+    async function handleRegistrationSubmit(e, url) {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('button');
+        const originalText = btn.innerText;
+        const messageEl = form.querySelector('[data-form-message]');
+
+        const password = form.querySelector('[name="password"]').value;
+        const confirm = form.querySelector('[name="confirm_password"]').value;
+        
+        if (password !== confirm) {
+            if (messageEl) messageEl.textContent = "Passwords do not match.";
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Generating Keys...';
+        if (messageEl) messageEl.textContent = 'Generating cryptographic keys...';
+
+        try {
+            // Client-Side Key Generation
+            const salt = window.cryptoManager.generateSalt();
+            const pwKey = await window.cryptoManager.deriveKeyFromPassword(password, salt);
+            const { encKey, signKey } = await window.cryptoManager.generateDualKeys();
+
+            const pubEnc = await window.cryptoManager.exportPublicKey(encKey.publicKey);
+            const pubSign = await window.cryptoManager.exportPublicKey(signKey.publicKey);
+
+            const privEnc = await window.cryptoManager.encryptPrivateKey(encKey.privateKey, pwKey);
+            const privSign = await window.cryptoManager.encryptPrivateKey(signKey.privateKey, pwKey);
+
+            const publicKeyJSON = JSON.stringify({ enc: pubEnc, sign: pubSign });
+            const privateKeyJSON = JSON.stringify({ enc: privEnc, sign: privSign });
+
+            const formData = new FormData(form);
+            formData.append('public_key', publicKeyJSON);
+            formData.append('encrypted_private_key', privateKeyJSON);
+            formData.append('salt', salt);
+
+            const res = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                form.innerHTML = `<div class="alert alert-success">${json.message}</div><p style="text-align:center"><a href="#" data-key="login">Proceed to Login</a></p>`;
+                form.querySelector('a').addEventListener('click', () => openModal('login'));
+            } else {
+                if (messageEl) {
+                    messageEl.textContent = json.message || 'Registration failed.';
+                    messageEl.classList.remove('success');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            if (messageEl) messageEl.textContent = 'Error: ' + err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
 });

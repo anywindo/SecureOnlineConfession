@@ -22,7 +22,7 @@ if ($username === '' || $password === '') {
 
 try {
     $pdo = get_pdo();
-    $statement = $pdo->prepare('SELECT id, full_name, password_hash, role FROM users WHERE username = :username');
+    $statement = $pdo->prepare('SELECT id, full_name, password_hash, role, encrypted_private_key, salt FROM users WHERE username = :username');
     $statement->execute(['username' => $username]);
     $user = $statement->fetch();
 
@@ -35,8 +35,16 @@ try {
     $_SESSION['username'] = $username;
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['role'] = $user['role'];
+    // E2EE: Return stored keys to client
+    $_SESSION['encrypted_private_key'] = $user['encrypted_private_key'];
+    $_SESSION['salt'] = $user['salt'];
 
-    echo json_encode(['success' => true, 'message' => 'Login successful']);
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Login successful',
+        'encrypted_private_key' => $user['encrypted_private_key'],
+        'salt' => $user['salt']
+    ]);
 
 } catch (Exception $e) {
     http_response_code(500);

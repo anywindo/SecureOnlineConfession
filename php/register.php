@@ -66,13 +66,25 @@ try {
         exit;
     }
 
+    // E2EE: Accept keys from client
+    $publicKey = $_POST['public_key'] ?? '';
+    $encryptedPrivateKey = $_POST['encrypted_private_key'] ?? '';
+    $salt = $_POST['salt'] ?? '';
+
+    if (!$publicKey || !$encryptedPrivateKey || !$salt) {
+        echo json_encode(['success' => false, 'message' => 'Cryptographic error: Missing keys or salt.']);
+        exit;
+    }
+
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
-    $keypair = generate_rsa_keys();
-    $encryptedPrivateKey = encrypt_private_key($keypair['private_key']);
+    
+    // Server no longer generates keys
+    // $keypair = generate_rsa_keys();
+    // $encryptedPrivateKey = encrypt_private_key($keypair['private_key']);
 
     $insert = $pdo->prepare(
-        'INSERT INTO users (username, full_name, password_hash, role, public_key, encrypted_private_key)
-         VALUES (:username, :full_name, :password_hash, :role, :public_key, :encrypted_private_key)'
+        'INSERT INTO users (username, full_name, password_hash, role, public_key, encrypted_private_key, salt)
+         VALUES (:username, :full_name, :password_hash, :role, :public_key, :encrypted_private_key, :salt)'
     );
 
     $insert->execute([
@@ -80,8 +92,9 @@ try {
         'full_name' => $fullName,
         'password_hash' => $passwordHash,
         'role' => $role,
-        'public_key' => $keypair['public_key'],
+        'public_key' => $publicKey,
         'encrypted_private_key' => $encryptedPrivateKey,
+        'salt' => $salt,
     ]);
 
     echo json_encode(['success' => true, 'message' => 'Registration successful. Please log in.']);

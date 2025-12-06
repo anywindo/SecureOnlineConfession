@@ -166,8 +166,16 @@
             return { ...newPair };
         },
         async ensureKeyPair(options = {}) {
+            const { register = false } = options;
             const existing = readStoredPair();
             if (existing) {
+                if (register) {
+                    try {
+                        await this.registerPublicKey(existing.publicKey);
+                    } catch (err) {
+                        console.warn('Failed to sync public key', err);
+                    }
+                }
                 return existing;
             }
             return this.generateKeyPair(options);

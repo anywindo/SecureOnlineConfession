@@ -114,6 +114,7 @@
                         </button>
                         <p style="margin:8px 0 0; font-size:12px; color:#a08c6a;">
                             Keys stay on this device and only the public key is registered with the server.
+                            If a message shows <em>[Unable to decrypt]</em>, click “Regenerate Secure Key,” then ask your partner to do the same before resending.
                         </p>
                     </div>
                     <button id="delete-all-btn"
@@ -182,6 +183,21 @@
                             <input type="text" id="thread-search" placeholder="Search by subject or partner"
                                 style="width:100%; padding:8px 10px; border:1px solid #d4c5b0; border-radius:4px; background:#fffdf5; font-family:'PT Sans', sans-serif; font-size:13px;">
                         </div>
+                        <div class="auto-refresh-panel" style="margin:10px 0 15px; padding:10px; border:1px dashed #d7c3a2; border-radius:6px; background:#fffaf0;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#5e4533;">
+                                <input type="checkbox" id="auto-refresh-toggle">
+                                Auto refresh messages
+                            </label>
+                            <label style="display:block; margin-top:6px; font-size:12px; color:#7a6147;">
+                                Interval
+                                <select id="auto-refresh-interval" style="width:100%; margin-top:4px; padding:6px; border:1px solid #d4c5b0; background:#fffdf5; font-family:'PT Sans', sans-serif;">
+                                    <option value="5000">5 seconds</option>
+                                    <option value="10000" selected>10 seconds</option>
+                                    <option value="15000">15 seconds</option>
+                                    <option value="30000">30 seconds</option>
+                                </select>
+                            </label>
+                        </div>
                         <div id="thread-empty" class="thread-empty" style="display:none;">
                             <p>No conversations yet.<br>Start a confession to see it here.</p>
                         </div>
@@ -218,7 +234,7 @@
                             <p class="muted">Nothing to show yet.</p>
                         </div>
                         <div class="chat-closed" id="chat-closed-banner" style="display:none;">
-                            This session has been closed. Submit a new confession with a fresh subject to continue.
+                            This session has been closed. If you see [Unable to decrypt], the key has expired. Go to advanced tab.
                         </div>
                         <form id="message-form" class="chat-composer" style="display:none;">
                             <label style="display:block; font-weight:bold; color:#3e2b1e;">

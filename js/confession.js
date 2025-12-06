@@ -1,4 +1,6 @@
 (() => {
+    const AUTO_REFRESH_DEFAULT = 10000;
+
     const API = {
         session: 'php/api/session.php',
         priests: 'php/api/priests.php',
@@ -7,7 +9,6 @@
         registerKey: 'php/api/chat/register_key.php',
         keyring: 'php/api/chat/keyring.php',
     };
-
     const state = {
         session: null,
         threads: [],
@@ -17,6 +18,9 @@
         keyCache: new Map(),
         debugMode: false,
         threadFilter: '',
+        autoRefreshTimer: null,
+        autoRefreshEnabled: false,
+        autoRefreshInterval: AUTO_REFRESH_DEFAULT,
     };
 
     const els = {
@@ -56,6 +60,8 @@
         sessionInspector: document.getElementById('session-inspector'),
         debugPanel: document.getElementById('debug-panel'),
         debugPanelBody: document.getElementById('debug-panel-body'),
+        autoRefreshToggle: document.getElementById('auto-refresh-toggle'),
+        autoRefreshInterval: document.getElementById('auto-refresh-interval'),
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -88,6 +94,13 @@
         }
 
         await loadThreads();
+        const autoToggle = document.getElementById('auto-refresh-toggle');
+        if (autoToggle) {
+            autoToggle.checked = state.autoRefreshEnabled;
+        }
+        if (state.autoRefreshEnabled) {
+            startAutoRefresh();
+        }
     }
 
     function hydrateSessionUI() {
@@ -154,6 +167,36 @@
 
         if (els.refreshBtn) {
             els.refreshBtn.addEventListener('click', () => loadThreads(true));
+        }
+
+        window.addEventListener('beforeunload', stopAutoRefresh);
+
+        if (els.autoRefreshToggle) {
+            state.autoRefreshEnabled = els.autoRefreshToggle.checked;
+            els.autoRefreshToggle.addEventListener('change', () => {
+                state.autoRefreshEnabled = els.autoRefreshToggle.checked;
+                if (state.autoRefreshEnabled) {
+                    loadThreads(true);
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+        }
+        if (els.autoRefreshInterval) {
+            const parsedValue = Number(els.autoRefreshInterval.value);
+            if (!Number.isNaN(parsedValue)) {
+                state.autoRefreshInterval = parsedValue;
+            }
+            els.autoRefreshInterval.addEventListener('change', () => {
+                const ms = Number(els.autoRefreshInterval.value);
+                if (!Number.isNaN(ms) && ms > 0) {
+                    state.autoRefreshInterval = ms;
+                    if (state.autoRefreshEnabled) {
+                        startAutoRefresh();
+                    }
+                }
+            });
         }
 
         if (els.threadList) {
@@ -328,7 +371,7 @@
             setActiveThread(null);
             return;
         }
-        await fetchPartnerPublicKey(thread.partner?.id || 0).catch(() => {});
+        await fetchPartnerPublicKey(thread.partner?.id || 0, { forceRefresh: true }).catch(() => {});
         state.activeThreadId = threadId;
         renderThreadList();
         await loadThreadMessages(threadId);
@@ -344,7 +387,7 @@
         if (partnerId) {
             await fetchPartnerPublicKey(partnerId).catch(() => {});
         }
-        const partnerKey = partnerId ? state.keyCache.get(partnerId) || null : null;
+        const partnerKey = partnerId ? getCachedPartnerKey(partnerId) : null;
         try {
             const data = await fetchJSON(`${API.messages}?thread_id=${encodeURIComponent(threadId)}`);
             const decrypted = data.messages.map((message) => {
@@ -519,7 +562,7 @@
         if (!partnerId) {
             throw new Error('Partner ID missing for this thread.');
         }
-        const partnerKey = await fetchPartnerPublicKey(partnerId);
+        const partnerKey = await fetchPartnerPublicKey(partnerId, { forceRefresh: true });
         if (!partnerKey) {
             throw new Error('Partner has not registered a secure chat key yet.');
         }
@@ -539,21 +582,47 @@
         updateDebugPanel();
     }
 
-    async function fetchPartnerPublicKey(userId) {
+    function getCachedPartnerKey(userId) {
+        const entry = state.keyCache.get(userId);
+        if (entry && typeof entry === 'object') {
+            return entry.publicKey || null;
+        }
+        if (typeof entry === 'string') {
+            return entry;
+        }
+        return null;
+    }
+
+    async function fetchPartnerPublicKey(userId, options = {}) {
+        const { forceRefresh = false } = options;
         if (!userId) {
             return null;
         }
-        if (state.keyCache.has(userId)) {
-            return state.keyCache.get(userId);
+        const cached = state.keyCache.get(userId);
+        if (cached && !forceRefresh) {
+            return typeof cached === 'string' ? cached : cached.publicKey || null;
         }
         const params = new URLSearchParams();
         params.append('user_id', String(userId));
-        const response = await fetchJSON(`${API.keyring}?${params.toString()}`);
-        const record = response?.keys?.find?.((key) => key.user_id === userId);
-        if (record?.public_key) {
-            state.keyCache.set(userId, record.public_key);
-            updateDebugPanel();
-            return record.public_key;
+        try {
+            const response = await fetchJSON(`${API.keyring}?${params.toString()}`);
+            const record = response?.keys?.find?.((key) => key.user_id === userId);
+            if (record?.public_key) {
+                state.keyCache.set(userId, {
+                    publicKey: record.public_key,
+                    updatedAt: record.updated_at || null,
+                });
+                updateDebugPanel();
+                return record.public_key;
+            }
+        } catch (error) {
+            if (cached && !forceRefresh) {
+                return typeof cached === 'string' ? cached : cached.publicKey || null;
+            }
+            throw error;
+        }
+        if (cached) {
+            return typeof cached === 'string' ? cached : cached.publicKey || null;
         }
         return null;
     }
@@ -600,6 +669,26 @@
             }
             return data;
         });
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        if (!state.autoRefreshEnabled) {
+            return;
+        }
+        state.autoRefreshTimer = window.setInterval(() => {
+            if (document.hidden || state.loadingThreads) {
+                return;
+            }
+            loadThreads(true);
+        }, state.autoRefreshInterval);
+    }
+
+    function stopAutoRefresh() {
+        if (state.autoRefreshTimer) {
+            clearInterval(state.autoRefreshTimer);
+            state.autoRefreshTimer = null;
+        }
     }
 
     function setComposerDisabled(disabled) {
@@ -697,7 +786,20 @@
             : []);
         const localKeyPair = window.ChatCrypto?.getKeyPair?.() || null;
         const partnerId = activeThread?.partner?.id ?? null;
-        const cachedPartnerKey = partnerId ? state.keyCache.get(partnerId) || null : null;
+        const cachedPartnerRecord = partnerId ? state.keyCache.get(partnerId) || null : null;
+        let partnerKeyPreview = null;
+        let partnerKeyUpdatedAt = null;
+        if (cachedPartnerRecord) {
+            const keyValue = typeof cachedPartnerRecord === 'string'
+                ? cachedPartnerRecord
+                : cachedPartnerRecord.publicKey;
+            if (keyValue) {
+                partnerKeyPreview = `${keyValue.slice(0, 24)}…`;
+            }
+            if (typeof cachedPartnerRecord === 'object') {
+                partnerKeyUpdatedAt = cachedPartnerRecord.updatedAt || null;
+            }
+        }
         const payload = {
             session: {
                 user_id: state.session?.user_id ?? null,
@@ -719,7 +821,8 @@
                     updated_at: activeThread.updated_at,
                 }
                 : null,
-            partnerKeyPreview: cachedPartnerKey ? `${cachedPartnerKey.slice(0, 24)}…` : null,
+            partnerKeyPreview,
+            partnerKeyUpdatedAt,
             metrics: {
                 totalThreads: state.threads.length,
                 filteredThreads: getFilteredThreads().length,

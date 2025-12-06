@@ -21,12 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $pdo = get_pdo();
-    // Delete all records from the confessions table
-    $stmt = $pdo->prepare('DELETE FROM confessions');
-    $stmt->execute();
+    $pdo->beginTransaction();
+    $pdo->exec('DELETE FROM chat_messages');
+    $pdo->exec('DELETE FROM chat_threads');
+    $pdo->commit();
 
-    echo json_encode(['success' => true, 'message' => 'All confessions have been deleted.']);
+    echo json_encode(['success' => true, 'message' => 'All chat threads and messages have been deleted.']);
 } catch (Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
 }

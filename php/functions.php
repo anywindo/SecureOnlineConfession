@@ -235,3 +235,227 @@ function encrypt_reply(string $replyPlaintext): array
 {
     return encrypt_data($replyPlaintext);
 }
+
+function ensure_confession_messages_schema(PDO $pdo): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+
+    $result = $pdo->query("SHOW TABLES LIKE 'confession_messages'");
+    if ($result === false || !$result->fetch()) {
+        $pdo->exec(
+            "CREATE TABLE confession_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                confession_id INT NOT NULL,
+                sender_id INT NOT NULL,
+                sender_role ENUM('user','priest') NOT NULL,
+                iv VARCHAR(255) NOT NULL,
+                ciphertext LONGTEXT NOT NULL,
+                message_hash CHAR(64) NOT NULL,
+                signature LONGTEXT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_confession_messages_confession (confession_id),
+                INDEX idx_confession_messages_sender (sender_id),
+                CONSTRAINT fk_messages_confession FOREIGN KEY (confession_id) REFERENCES confessions(id) ON DELETE CASCADE,
+                CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    $initialized = true;
+}
+
+function persist_confession_message(PDO $pdo, int $confessionId, int $senderId, string $senderRole, string $plaintext, ?string $signature = null): array
+{
+    ensure_confession_messages_schema($pdo);
+
+    $payload = encrypt_data($plaintext);
+    $hash = compute_message_hash($plaintext);
+    $role = $senderRole === 'priest' ? 'priest' : 'user';
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO confession_messages (confession_id, sender_id, sender_role, iv, ciphertext, message_hash, signature)
+         VALUES (:confession_id, :sender_id, :sender_role, :iv, :ciphertext, :message_hash, :signature)'
+    );
+
+    $stmt->execute([
+        'confession_id' => $confessionId,
+        'sender_id' => $senderId,
+        'sender_role' => $role,
+        'iv' => $payload['iv'],
+        'ciphertext' => $payload['ciphertext'],
+        'message_hash' => $hash,
+        'signature' => $signature,
+    ]);
+
+    $messageId = (int)$pdo->lastInsertId();
+    $select = $pdo->prepare(
+        'SELECT cm.*, u.username, u.full_name, u.public_key
+         FROM confession_messages cm
+         JOIN users u ON cm.sender_id = u.id
+         WHERE cm.id = :id'
+    );
+    $select->execute(['id' => $messageId]);
+    $row = $select->fetch();
+
+    return normalize_confession_message_row($row);
+}
+
+function build_initial_confession_message(array $row): array
+{
+    $plaintext = decrypt_data($row['ciphertext'], $row['iv']);
+    $hash = compute_message_hash($plaintext);
+    $signatureValid = verify_signature($hash, $row['signature'], $row['public_key']);
+
+    return [
+        'id' => 'confession-' . $row['id'],
+        'sender_role' => 'user',
+        'sender_id' => (int)$row['sender_id'],
+        'sender_name' => $row['sender_full_name'] ?? $row['username'],
+        'created_at' => $row['created_at'],
+        'plaintext' => $plaintext,
+        'signature_valid' => $signatureValid,
+        'is_initial' => true,
+        'is_legacy' => false,
+    ];
+}
+
+function build_legacy_priest_reply(array $row): ?array
+{
+    if (empty($row['reply_ciphertext']) || empty($row['reply_iv'])) {
+        return null;
+    }
+
+    $plaintext = decrypt_data($row['reply_ciphertext'], $row['reply_iv']);
+
+    return [
+        'id' => 'legacy-reply-' . $row['id'],
+        'sender_role' => 'priest',
+        'sender_id' => isset($row['recipient_id']) ? (int)$row['recipient_id'] : 0,
+        'sender_name' => $row['recipient_full_name'] ?? 'Priest',
+        'created_at' => $row['reply_at'] ?? $row['created_at'],
+        'plaintext' => $plaintext,
+        'signature_valid' => null,
+        'is_initial' => false,
+        'is_legacy' => true,
+    ];
+}
+
+function normalize_confession_message_row(array $row): array
+{
+    $plaintext = decrypt_data($row['ciphertext'], $row['iv']);
+    $signatureValid = null;
+    if (!empty($row['signature']) && !empty($row['public_key'])) {
+        $signatureValid = verify_signature($row['message_hash'], $row['signature'], $row['public_key']);
+    }
+
+    return [
+        'id' => (int)$row['id'],
+        'sender_role' => $row['sender_role'] === 'priest' ? 'priest' : 'user',
+        'sender_id' => (int)$row['sender_id'],
+        'sender_name' => $row['full_name'] ?: $row['username'],
+        'created_at' => $row['created_at'],
+        'plaintext' => $plaintext,
+        'text' => $plaintext,
+        'signature_valid' => $signatureValid,
+        'is_initial' => false,
+        'is_legacy' => false,
+    ];
+}
+
+function count_confession_messages(PDO $pdo, int $confessionId): int
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS total FROM confession_messages WHERE confession_id = :id');
+    $stmt->execute(['id' => $confessionId]);
+    $row = $stmt->fetch();
+    return (int)($row['total'] ?? 0);
+}
+
+function determine_thread_status(array $confessionRow, array $lastMessage): string
+{
+    if (!empty($confessionRow['resolved'])) {
+        return 'closed';
+    }
+
+    return $lastMessage['sender_role'] === 'user' ? 'awaiting_priest' : 'awaiting_penitent';
+}
+
+function fetch_confession_messages(PDO $pdo, array $confessionRow): array
+{
+    ensure_confession_messages_schema($pdo);
+
+    $messages = [build_initial_confession_message($confessionRow)];
+    $legacy = build_legacy_priest_reply($confessionRow);
+    if ($legacy) {
+        $messages[] = $legacy;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT cm.*, u.username, u.full_name, u.public_key
+         FROM confession_messages cm
+         JOIN users u ON cm.sender_id = u.id
+         WHERE cm.confession_id = :confession_id
+         ORDER BY cm.created_at ASC, cm.id ASC'
+    );
+    $stmt->execute(['confession_id' => (int)$confessionRow['id']]);
+
+    $rows = $stmt->fetchAll();
+    foreach ($rows as $row) {
+        $messages[] = normalize_confession_message_row($row);
+    }
+
+    usort($messages, static function (array $a, array $b): int {
+        return strtotime($a['created_at']) <=> strtotime($b['created_at']);
+    });
+
+    return $messages;
+}
+
+function fetch_latest_confession_message(PDO $pdo, array $confessionRow): array
+{
+    $latest = build_initial_confession_message($confessionRow);
+
+    $legacy = build_legacy_priest_reply($confessionRow);
+    if ($legacy && strtotime($legacy['created_at']) >= strtotime($latest['created_at'])) {
+        $latest = $legacy;
+    }
+
+    ensure_confession_messages_schema($pdo);
+    $stmt = $pdo->prepare(
+        'SELECT cm.*, u.username, u.full_name, u.public_key
+         FROM confession_messages cm
+         JOIN users u ON cm.sender_id = u.id
+         WHERE cm.confession_id = :confession_id
+         ORDER BY cm.created_at DESC, cm.id DESC
+         LIMIT 1'
+    );
+    $stmt->execute(['confession_id' => (int)$confessionRow['id']]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $candidate = normalize_confession_message_row($row);
+        if (strtotime($candidate['created_at']) >= strtotime($latest['created_at'])) {
+            $latest = $candidate;
+        }
+    }
+
+    return $latest;
+}
+function fetch_chat_thread(PDO $pdo, int $threadId, int $userId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT * FROM chat_threads
+         WHERE id = :id
+           AND (penitent_id = :penitent_match OR priest_id = :priest_match)
+         LIMIT 1'
+    );
+    $stmt->execute([
+        'id' => $threadId,
+        'penitent_match' => $userId,
+        'priest_match' => $userId,
+    ]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}

@@ -238,7 +238,13 @@
                                 <h3 id="active-subject">No conversation selected</h3>
                                 <p class="muted" id="active-status">Choose a subject to view the secure chat.</p>
                             </div>
-                            <span class="status-pill" id="thread-status-pill">Idle</span>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span class="status-pill" id="thread-status-pill">Idle</span>
+                                <button type="button" id="delete-thread-btn"
+                                    style="display:none; padding:6px 10px; border:1px solid #8c3333; background:#fff5f2; color:#8c3333; border-radius:4px; font-size:12px; cursor:pointer;">
+                                    Delete Session
+                                </button>
+                            </div>
                         </header>
                         <div class="session-meta-grid" id="session-inspector" style="display:none;">
                             <div>
@@ -264,6 +270,9 @@
                         <div class="chat-closed" id="chat-closed-banner" style="display:none;">
                             This session has been closed. If you see [Unable to decrypt], the key has expired. Go to advanced tab.
                         </div>
+                        <p class="muted" style="font-size:12px; margin:10px 0;">
+                            Trouble decrypting? Expand the <strong>advanced</strong> panel above to regenerate or import your secure key.
+                        </p>
                         <form id="message-form" class="chat-composer" style="display:none;">
                             <label style="display:block; font-weight:bold; color:#3e2b1e;">
                                 Your Message

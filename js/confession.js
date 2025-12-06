@@ -68,6 +68,7 @@
         importKeyInput: document.getElementById('import-key-file'),
         forgetKeyBtn: document.getElementById('forget-key-btn'),
         keyBackupStatus: document.getElementById('key-backup-status'),
+        deleteThreadBtn: document.getElementById('delete-thread-btn'),
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -235,6 +236,21 @@
                     }
                 });
             }
+        }
+
+        if (els.deleteThreadBtn) {
+            els.deleteThreadBtn.addEventListener('click', () => {
+                if (!state.activeThreadId) {
+                    return;
+                }
+                const confirmText = 'Are you sure you want to delete this session? This cannot be undone.';
+                if (!window.confirm(confirmText)) {
+                    return;
+                }
+                deleteActiveThread().catch((error) => {
+                    showAlert('error', error.message || 'Failed to delete session.');
+                });
+            });
         }
 
         if (els.threadList) {
@@ -483,6 +499,7 @@
         }
         renderMessages(messages);
         updateDebugPanel(thread, messages);
+        toggleDeleteButton(Boolean(thread));
     }
 
     function setChatHeaderDefault() {
@@ -500,6 +517,7 @@
         if (els.inspectorSubject) els.inspectorSubject.textContent = '—';
         if (els.inspectorStatus) els.inspectorStatus.textContent = '—';
         if (els.inspectorUpdated) els.inspectorUpdated.textContent = '—';
+        toggleDeleteButton(false);
     }
 
     function updateChatHeader(thread, messages) {
@@ -707,6 +725,33 @@
             }
             return data;
         });
+    }
+
+    function toggleDeleteButton(visible) {
+        if (!els.deleteThreadBtn) return;
+        els.deleteThreadBtn.style.display = visible ? 'inline-block' : 'none';
+    }
+
+    async function deleteActiveThread() {
+        const threadId = state.activeThreadId;
+        if (!threadId) {
+            throw new Error('No session selected.');
+        }
+        const response = await fetch(API.threads, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thread_id: threadId }),
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok || json?.success === false) {
+            throw new Error(json?.message || 'Failed to delete session.');
+        }
+        state.messagesByThread.delete(threadId);
+        state.threads = state.threads.filter((thread) => thread.id !== threadId);
+        state.activeThreadId = null;
+        renderThreadList();
+        setActiveThread(null);
+        showAlert('success', 'Session deleted.');
     }
 
     function startAutoRefresh() {

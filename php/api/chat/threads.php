@@ -85,6 +85,33 @@ try {
         exit;
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+        $input = file_get_contents('php://input');
+        $payload = json_decode($input, true);
+        if (!is_array($payload) || !isset($payload['thread_id'])) {
+            parse_str($input, $payload);
+        }
+        $threadId = (int)($payload['thread_id'] ?? 0);
+        if ($threadId <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'thread_id is required.']);
+            exit;
+        }
+
+        $thread = fetch_chat_thread($pdo, $threadId, $userId);
+        if (!$thread) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Thread not found or access denied.']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare('DELETE FROM chat_threads WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $threadId]);
+
+        echo json_encode(['success' => true, 'message' => 'Thread deleted.']);
+        exit;
+    }
+
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
 } catch (Throwable $e) {

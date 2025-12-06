@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Dec 06, 2025 at 03:02 AM
+-- Generation Time: Dec 06, 2025 at 02:04 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -21,6 +21,7 @@ SET time_zone = "+00:00";
 -- Database: `db_kripto_confession`
 --
 
+DROP DATABASE IF EXISTS `db_kripto_confession`;
 CREATE DATABASE `db_kripto_confession`;
 USE `db_kripto_confession`;
 
@@ -42,8 +43,8 @@ CREATE TABLE `chat_keys` (
 --
 
 INSERT INTO `chat_keys` (`id`, `user_id`, `public_key`, `updated_at`) VALUES
-(1, 9, '04563213245b4f1f0e59153ece4d8ea2be0d0269c0a14d0cbded682215f988027528e60970e73a4426c677ab33597f9319988a1c9ec86d72c275d87db9b7839302', '2025-12-06 00:38:54'),
-(2, 8, '0462c17e8b23836781a3bf1440b5757cad8b6fe2278059a9f5f13f1a043d4b725f7a87f8b6aa31e7c6d4d541b73546b8925ab296a22c4b9a2bd4b35dc0185c0c0f', '2025-12-06 00:55:29');
+(1, 9, '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', '2025-12-06 13:03:12'),
+(2, 8, '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', '2025-12-06 12:52:00');
 
 -- --------------------------------------------------------
 
@@ -67,9 +68,11 @@ CREATE TABLE `chat_messages` (
 --
 
 INSERT INTO `chat_messages` (`id`, `thread_id`, `sender_id`, `sender_public_key`, `recipient_public_key`, `ciphertext_b64`, `created_at`, `read_at`) VALUES
-(10, 6, 9, '04563213245b4f1f0e59153ece4d8ea2be0d0269c0a14d0cbded682215f988027528e60970e73a4426c677ab33597f9319988a1c9ec86d72c275d87db9b7839302', '0462c17e8b23836781a3bf1440b5757cad8b6fe2278059a9f5f13f1a043d4b725f7a87f8b6aa31e7c6d4d541b73546b8925ab296a22c4b9a2bd4b35dc0185c0c0f', '1SzCm+Dce+hJa/UCefD7k6zKSksr/G8sfV+kBGW6FderdF1nbw5w6Njx0PT266Ml', '2025-12-06 01:26:17', NULL),
-(11, 6, 8, '0462c17e8b23836781a3bf1440b5757cad8b6fe2278059a9f5f13f1a043d4b725f7a87f8b6aa31e7c6d4d541b73546b8925ab296a22c4b9a2bd4b35dc0185c0c0f', '04563213245b4f1f0e59153ece4d8ea2be0d0269c0a14d0cbded682215f988027528e60970e73a4426c677ab33597f9319988a1c9ec86d72c275d87db9b7839302', 'gDU03uvQS+q8hpGOyhIMM641ktE3TJlhvycQCv3z8DfTc8/tGume8Hx6AcEgGtr6', '2025-12-06 01:26:39', NULL),
-(12, 6, 9, '04563213245b4f1f0e59153ece4d8ea2be0d0269c0a14d0cbded682215f988027528e60970e73a4426c677ab33597f9319988a1c9ec86d72c275d87db9b7839302', '0462c17e8b23836781a3bf1440b5757cad8b6fe2278059a9f5f13f1a043d4b725f7a87f8b6aa31e7c6d4d541b73546b8925ab296a22c4b9a2bd4b35dc0185c0c0f', 'F+SjpO/jbeVWUgJXum1WpNe6AM0HNbJEXaQID7hW7t8=', '2025-12-06 01:52:43', NULL);
+(56, 22, 9, '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', 'M04vfU4jPkhrZPJhRmHoi80ydU9DmnlDVfBvH9A/KPbbkCOKjJOp6H6UBo8M6IkoAhyIssnsikJkFyU4wSOL3dqHDZusaxL7v67z8mx/nbI=', '2025-12-06 12:54:30', NULL),
+(57, 22, 8, '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', 'CnoxwiEKvr7Rp6tIzc9QiT0SPVWitcoTOXVJ/agAvpgxmvWsIfnzWyBdaDDqk0ISDRQtbQMgG3Te4sX8RsvCW1eDMIHc1xdXPhNUXzcagotX0SUicpjZ0FJUn4+hjeiNsjjL+OR9UIRBIUSROXQ3WIm6mMKGgHCq20hv9kznw/lRnfllx/s+gcBfXFr7EbNaIeLjeWeh1vg4e/P+z8Wju83vCsCrJaerKIw51Zr6TAxhGl+nY9WrlcxymkVWRXS163LKF9joALx66El1EATppRU5/pEQonGkshNF3iMXHu9+NUPVG7u8k6MonxjwLy4O0S1jxbxfH3yeyWtqFDR+rLafEc6ZQt2aXuBkpnZT9KoOQO7bMJI+hfXjocS0dFXw', '2025-12-06 12:57:59', NULL),
+(58, 22, 9, '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', 'JcItXsoIWumfojmu6lqH277lqo9ilwB8R7fApDhlarWpOOfYsXl0cOKDJsFVu084pVXQHCwxleM0cOuD1O2r4CVYuEhxTTIWUzo+JVdiD29nlnVKhBK/RcSoTbEBX/IH', '2025-12-06 13:00:30', NULL),
+(59, 22, 8, '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', 'juBODEJZ4IepCtJ2TEA5j448OsG4VO2ZtlFYSpUjQNPrTE1wAP/1V/f0lwOqXKbNDnhSURLYIB4ZZOE9GgGxy9Zmo91NyZltUJwQsgiVfWEu37jD2KS1uGOmS8lDzLUeg/KE4cRyLjYXPwhFH67Ny7QFUoilxEsGekEbavnw/fQ=', '2025-12-06 13:01:26', NULL),
+(60, 22, 9, '04aecad00bce9e2f098b4cf895817d0a359fd712842532e73a603a7462cb6e4e34e00b4935c96b6648a34f21fc28864732d3c03f4c3e2a35eedc8cf0a7cb9fa60b', '04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f', 'zfZ/MF8I09X2K5Jqr2iZxImebh3O4klShMvhbuWsG4LFGmHG8g5QHgHFSa82HYT7zNWUMDjrIgfmmRZE95WkwA==', '2025-12-06 13:02:31', NULL);
 
 -- --------------------------------------------------------
 
@@ -92,7 +95,7 @@ CREATE TABLE `chat_threads` (
 --
 
 INSERT INTO `chat_threads` (`id`, `penitent_id`, `priest_id`, `subject`, `resolved`, `created_at`, `updated_at`) VALUES
-(6, 9, 8, 'Session One', 1, '2025-12-06 01:26:17', '2025-12-06 01:52:43');
+(22, 9, 8, 'Session 1', 1, '2025-12-06 12:54:30', '2025-12-06 13:02:31');
 
 -- --------------------------------------------------------
 
@@ -161,25 +164,25 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `chat_keys`
 --
 ALTER TABLE `chat_keys`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `chat_threads`
 --
 ALTER TABLE `chat_threads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- Constraints for dumped tables

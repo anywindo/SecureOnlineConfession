@@ -9,21 +9,37 @@ if (!file_exists($randSeedFile)) {
 }
 putenv('RANDFILE=' . $randSeedFile);
 
-if (!getenv('OPENSSL_CONF')) {
+/**
+ * Locates the valid OpenSSL configuration file.
+ */
+function get_openssl_config_path(): ?string
+{
+    $envConf = getenv('OPENSSL_CONF');
+    if ($envConf && file_exists($envConf)) {
+        return $envConf;
+    }
+
     $candidatePaths = [
+        'C:\xampp\apache\bin\openssl.cnf', // Common XAMPP location
+        'C:\xampp\apache\conf\openssl.cnf',
+        'C:\xampp\php\extras\ssl\openssl.cnf',
         '/Applications/XAMPP/xamppfiles/etc/openssl.cnf',
         '/etc/ssl/openssl.cnf',
         '/usr/lib/ssl/openssl.cnf',
-        'C:\xampp\apache\conf\openssl.cnf',
-        'C:\xampp\php\extras\ssl\openssl.cnf',
     ];
 
     foreach ($candidatePaths as $path) {
         if (file_exists($path)) {
-            putenv('OPENSSL_CONF=' . $path);
-            break;
+            return $path;
         }
     }
+
+    return null;
+}
+
+// Initialize environment
+if ($conf = get_openssl_config_path()) {
+    putenv('OPENSSL_CONF=' . $conf);
 }
 
 const RSA_KEY_BITS = 2048;
@@ -40,6 +56,10 @@ function generate_rsa_keys(): array
         'private_key_type' => OPENSSL_KEYTYPE_RSA,
     ];
 
+    if ($confPath = get_openssl_config_path()) {
+        $config['config'] = $confPath;
+    }
+
     $resource = openssl_pkey_new($config);
 
     if ($resource === false) {
@@ -47,7 +67,7 @@ function generate_rsa_keys(): array
     }
 
     $privateKey = '';
-    if (!openssl_pkey_export($resource, $privateKey)) {
+    if (!openssl_pkey_export($resource, $privateKey, null, $config)) {
         throw new RuntimeException('Failed to export private key: ' . openssl_error_string());
     }
 
@@ -290,7 +310,7 @@ function persist_confession_message(PDO $pdo, int $confessionId, int $senderId, 
         'signature' => $signature,
     ]);
 
-    $messageId = (int)$pdo->lastInsertId();
+    $messageId = (int) $pdo->lastInsertId();
     $select = $pdo->prepare(
         'SELECT cm.*, u.username, u.full_name, u.public_key
          FROM confession_messages cm
@@ -312,7 +332,7 @@ function build_initial_confession_message(array $row): array
     return [
         'id' => 'confession-' . $row['id'],
         'sender_role' => 'user',
-        'sender_id' => (int)$row['sender_id'],
+        'sender_id' => (int) $row['sender_id'],
         'sender_name' => $row['sender_full_name'] ?? $row['username'],
         'created_at' => $row['created_at'],
         'plaintext' => $plaintext,
@@ -333,7 +353,7 @@ function build_legacy_priest_reply(array $row): ?array
     return [
         'id' => 'legacy-reply-' . $row['id'],
         'sender_role' => 'priest',
-        'sender_id' => isset($row['recipient_id']) ? (int)$row['recipient_id'] : 0,
+        'sender_id' => isset($row['recipient_id']) ? (int) $row['recipient_id'] : 0,
         'sender_name' => $row['recipient_full_name'] ?? 'Priest',
         'created_at' => $row['reply_at'] ?? $row['created_at'],
         'plaintext' => $plaintext,
@@ -352,9 +372,9 @@ function normalize_confession_message_row(array $row): array
     }
 
     return [
-        'id' => (int)$row['id'],
+        'id' => (int) $row['id'],
         'sender_role' => $row['sender_role'] === 'priest' ? 'priest' : 'user',
-        'sender_id' => (int)$row['sender_id'],
+        'sender_id' => (int) $row['sender_id'],
         'sender_name' => $row['full_name'] ?: $row['username'],
         'created_at' => $row['created_at'],
         'plaintext' => $plaintext,
@@ -370,7 +390,7 @@ function count_confession_messages(PDO $pdo, int $confessionId): int
     $stmt = $pdo->prepare('SELECT COUNT(*) AS total FROM confession_messages WHERE confession_id = :id');
     $stmt->execute(['id' => $confessionId]);
     $row = $stmt->fetch();
-    return (int)($row['total'] ?? 0);
+    return (int) ($row['total'] ?? 0);
 }
 
 function determine_thread_status(array $confessionRow, array $lastMessage): string
@@ -399,7 +419,7 @@ function fetch_confession_messages(PDO $pdo, array $confessionRow): array
          WHERE cm.confession_id = :confession_id
          ORDER BY cm.created_at ASC, cm.id ASC'
     );
-    $stmt->execute(['confession_id' => (int)$confessionRow['id']]);
+    $stmt->execute(['confession_id' => (int) $confessionRow['id']]);
 
     $rows = $stmt->fetchAll();
     foreach ($rows as $row) {
@@ -431,7 +451,7 @@ function fetch_latest_confession_message(PDO $pdo, array $confessionRow): array
          ORDER BY cm.created_at DESC, cm.id DESC
          LIMIT 1'
     );
-    $stmt->execute(['confession_id' => (int)$confessionRow['id']]);
+    $stmt->execute(['confession_id' => (int) $confessionRow['id']]);
     $row = $stmt->fetch();
 
     if ($row) {

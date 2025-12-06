@@ -4,7 +4,6 @@
   "description": "PHP 8.2 / MySQL demo app that showcases the four foundational cryptography services (authentication, confidentiality, integrity, and non-repudiation) through a secure confession workflow.",
   "main": "index.js",
   "directories": {
-    "example": "example",
     "test": "tests"
   },
   "scripts": {

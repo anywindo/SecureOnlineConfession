@@ -1,5 +1,7 @@
 ## Confession Rebuild Plan (ECDH-Based Chat)
 
+> Legacy `/example/chat` assets were fully analyzed and have now been removed from the repository; references below remain only as historical context for the rebuilt architecture.
+
 ### 1. Lessons from `example/chat/frontend/index-ecdh.html`
 - The demo relies on **client-side ECDH** (elliptic `p256`) to derive a shared secret with the recipient’s public key, hashes it (SHA-256) into an AES key, and encrypts plaintext with a random IV (`CryptoJS.AES.encrypt`).
 - Every message payload stores the sender name, recipient name, sender public key, and the IV + ciphertext in Base64 (`chatmessages` table).

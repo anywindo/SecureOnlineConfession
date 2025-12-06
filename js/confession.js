@@ -1,17 +1,26 @@
 (() => {
-    async function fetchJSON(url, options = {}) {
-        const response = await fetch(url, options);
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    }
+    const AUTO_REFRESH_DEFAULT = 10000;
+
+    const API = {
+        session: 'php/api/session.php',
+        priests: 'php/api/priests.php',
+        threads: 'php/api/chat/threads.php',
+        messages: 'php/api/chat/messages.php',
+        registerKey: 'php/api/chat/register_key.php',
+        keyring: 'php/api/chat/keyring.php',
+    };
     const state = {
         session: null,
+        threads: [],
+        messagesByThread: new Map(),
+        activeThreadId: null,
+        loadingThreads: false,
+        keyCache: new Map(),
         debugMode: false,
-        messagesByPenitent: {},
-        activeRecipientId: null,
-        activeRecipientName: '',
-        activeSubject: '',
-        activeReplyConfessionId: null,
+        threadFilter: '',
+        autoRefreshTimer: null,
+        autoRefreshEnabled: false,
+        autoRefreshInterval: AUTO_REFRESH_DEFAULT,
     };
 
     const els = {
@@ -26,375 +35,968 @@
         statTotal: document.getElementById('stat-total'),
         statAwaiting: document.getElementById('stat-awaiting'),
         statReplied: document.getElementById('stat-replied'),
-        confessionList: document.getElementById('confession-list'),
         confessForm: document.getElementById('confess-form'),
         priestSelect: document.getElementById('priest-select'),
+        threadList: document.getElementById('thread-list'),
+        threadEmpty: document.getElementById('thread-empty'),
+        threadSearch: document.getElementById('thread-search'),
+        refreshBtn: document.getElementById('refresh-threads'),
+        chatMessages: document.getElementById('chat-messages'),
+        messageForm: document.getElementById('message-form'),
+        messageTextarea: document.querySelector('#message-form textarea'),
+        resolveCheckbox: document.querySelector('#message-form input[name="resolve"]'),
+        activePartner: document.getElementById('active-partner'),
+        activeSubject: document.getElementById('active-subject'),
+        activeStatus: document.getElementById('active-status'),
+        statusPill: document.getElementById('thread-status-pill'),
+        closedBanner: document.getElementById('chat-closed-banner'),
+        alertArea: document.getElementById('alert-area'),
         debugToggle: document.getElementById('debug-toggle'),
-        penitentList: document.getElementById('penitent-list'),
-        penitentItems: document.getElementById('penitent-items'),
-        replyForm: document.getElementById('reply-form'),
-        replyTarget: document.getElementById('reply-target'),
-        conversationModal: document.getElementById('conversationModal'),
-        conversationClose: document.getElementById('conversationClose'),
-        conversationBody: document.getElementById('conversationBody'),
-        conversationTitle: document.getElementById('conversationTitle'),
-        modalReplyForm: document.getElementById('modal-reply-form'),
+        deleteBtn: document.getElementById('delete-all-btn'),
+        inspectorPartner: document.getElementById('inspector-partner'),
+        inspectorSubject: document.getElementById('inspector-subject'),
+        inspectorStatus: document.getElementById('inspector-status'),
+        inspectorUpdated: document.getElementById('inspector-updated'),
+        sessionInspector: document.getElementById('session-inspector'),
+        debugPanel: document.getElementById('debug-panel'),
+        debugPanelBody: document.getElementById('debug-panel-body'),
+        autoRefreshToggle: document.getElementById('auto-refresh-toggle'),
+        autoRefreshInterval: document.getElementById('auto-refresh-interval'),
+        keyBackupPassphrase: document.getElementById('key-backup-passphrase'),
+        exportKeyBtn: document.getElementById('export-key-btn'),
+        importKeyBtn: document.getElementById('import-key-btn'),
+        importKeyInput: document.getElementById('import-key-file'),
+        forgetKeyBtn: document.getElementById('forget-key-btn'),
+        keyBackupStatus: document.getElementById('key-backup-status'),
+        deleteThreadBtn: document.getElementById('delete-thread-btn'),
     };
 
-    init();
+    document.addEventListener('DOMContentLoaded', () => {
+        init().catch((error) => {
+            console.error(error);
+            showAlert('error', 'Failed to initialize the confession portal.');
+        });
+    });
 
     async function init() {
-        state.session = await fetchJSON('php/api/session.php');
-        if (!state.session.authenticated) {
+        const session = await fetchJSON(API.session);
+        if (!session?.authenticated) {
             window.location.href = 'index.html';
             return;
         }
+        state.session = session;
+        hydrateSessionUI();
+        registerEventHandlers();
 
-        setupUI();
-        registerHandlers();
-        if (state.session.role === 'user') {
-            await populatePriestSelect();
+        if (session.role === 'user') {
+            await populatePriests();
         }
-        loadConfessions();
+
+        try {
+            if (window.ChatCrypto) {
+                await window.ChatCrypto.ensureKeyPair({ register: true });
+            }
+        } catch (error) {
+            console.warn('Key bootstrap failed', error);
+        }
+
+        await loadThreads();
+        const autoToggle = document.getElementById('auto-refresh-toggle');
+        if (autoToggle) {
+            autoToggle.checked = state.autoRefreshEnabled;
+        }
+        if (state.autoRefreshEnabled) {
+            startAutoRefresh();
+        }
     }
 
-    function setupUI() {
+    function hydrateSessionUI() {
         const { session } = state;
-        els.welcome.style.display = 'inline-block';
-        els.loginBtn.style.display = 'none';
-        els.usernameDisplay.textContent = session.full_name || session.username;
-        els.userRoleDisplay.textContent = session.role === 'priest' ? 'Priest Portal' : 'Penitent Portal';
-        els.userNameDisplay.textContent = `Welcome, ${session.full_name || session.username}`;
-        els.roleDescription.textContent = session.role === 'priest'
-            ? 'Review every confession, validate authenticity, and provide encrypted counsel.'
-            : 'Submit your confession and keep track of replies from the clergy.';
-        els.confessSection.style.display = session.role === 'user' ? 'block' : 'none';
-        els.statsSection.style.display = session.role === 'priest' ? 'grid' : 'none';
-        if (state.session.role === 'user') {
-            els.replyForm.style.display = 'block';
-            els.modalReplyForm.style.display = 'none';
-        } else {
-            els.replyForm.style.display = 'none';
+        if (els.welcome) els.welcome.style.display = 'inline-block';
+        if (els.loginBtn) els.loginBtn.style.display = 'none';
+        if (els.usernameDisplay) els.usernameDisplay.textContent = session.full_name || session.username;
+        if (els.userRoleDisplay) {
+            els.userRoleDisplay.textContent = session.role === 'priest' ? 'Priest Portal' : 'Penitent Portal';
+        }
+        if (els.userNameDisplay) {
+            els.userNameDisplay.textContent = `Welcome, ${session.full_name || session.username}`;
+        }
+        if (els.roleDescription) {
+            els.roleDescription.textContent = session.role === 'priest'
+                ? 'Review every confession, validate authenticity, and provide encrypted counsel.'
+                : 'Submit your confession and keep track of replies from the clergy.';
+        }
+        if (els.confessSection) {
+            els.confessSection.style.display = session.role === 'user' ? 'block' : 'none';
+        }
+        if (els.statsSection) {
+            els.statsSection.style.display = session.role === 'priest' ? 'grid' : 'none';
+        }
+        if (els.deleteBtn) {
+            els.deleteBtn.style.display = session.role === 'priest' ? 'inline-block' : 'none';
         }
     }
 
-    function registerHandlers() {
-        els.debugToggle?.addEventListener('change', () => {
-            state.debugMode = els.debugToggle.checked;
-            loadConfessions();
-        });
+    function registerEventHandlers() {
+        if (els.debugToggle) {
+            els.debugToggle.addEventListener('change', () => {
+                state.debugMode = els.debugToggle.checked;
+                renderActiveThread();
+            });
+        }
 
-        // Delete All Button Logic
-        const deleteBtn = document.getElementById('delete-all-btn');
-        if (deleteBtn) {
-            // Show only for priests
-            if (state.session.role === 'priest') {
-                deleteBtn.style.display = 'block';
-                deleteBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    if (confirm('Are you sure you want to delete ALL confessions? This cannot be undone.')) {
-                        try {
-                            const res = await fetchJSON('php/api/delete_all.php', { method: 'POST' });
-                            alert(res.message);
-                            loadConfessions();
-                        } catch (e) {
-                            alert('Failed to delete confessions.');
-                        }
+        if (els.threadSearch) {
+            els.threadSearch.addEventListener('input', (event) => {
+                state.threadFilter = event.target.value.trim().toLowerCase();
+                renderThreadList();
+            });
+        }
+
+        if (els.deleteBtn && state.session.role === 'priest') {
+            els.deleteBtn.addEventListener('click', async (event) => {
+                event.preventDefault();
+                if (!confirm('Delete ALL chat threads and messages? This action cannot be undone.')) {
+                    return;
+                }
+                try {
+                    await fetchJSON('php/api/delete_all.php', { method: 'POST' });
+                    showAlert('success', 'All threads deleted.');
+                    await loadThreads(true);
+                } catch (error) {
+                    showAlert('error', error.message || 'Failed to delete threads.');
+                }
+            });
+        }
+
+        if (els.confessForm) {
+            els.confessForm.addEventListener('submit', handleConfessionSubmit);
+        }
+
+        if (els.refreshBtn) {
+            els.refreshBtn.addEventListener('click', () => loadThreads(true));
+        }
+
+        window.addEventListener('beforeunload', stopAutoRefresh);
+
+        if (els.autoRefreshToggle) {
+            state.autoRefreshEnabled = els.autoRefreshToggle.checked;
+            els.autoRefreshToggle.addEventListener('change', () => {
+                state.autoRefreshEnabled = els.autoRefreshToggle.checked;
+                if (state.autoRefreshEnabled) {
+                    loadThreads(true);
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+        }
+        if (els.autoRefreshInterval) {
+            const parsedValue = Number(els.autoRefreshInterval.value);
+            if (!Number.isNaN(parsedValue)) {
+                state.autoRefreshInterval = parsedValue;
+            }
+            els.autoRefreshInterval.addEventListener('change', () => {
+                const ms = Number(els.autoRefreshInterval.value);
+                if (!Number.isNaN(ms) && ms > 0) {
+                    state.autoRefreshInterval = ms;
+                    if (state.autoRefreshEnabled) {
+                        startAutoRefresh();
+                    }
+                }
+            });
+        }
+
+        if (window.ChatCrypto) {
+            if (els.exportKeyBtn) {
+                els.exportKeyBtn.addEventListener('click', () => {
+                    handleKeyExport().catch((error) => {
+                        console.error(error);
+                        setBackupStatus(error.message || 'Export failed.', true);
+                    });
+                });
+            }
+            if (els.importKeyBtn && els.importKeyInput) {
+                els.importKeyBtn.addEventListener('click', () => {
+                    els.importKeyInput.value = '';
+                    els.importKeyInput.click();
+                });
+                els.importKeyInput.addEventListener('change', () => {
+                    handleKeyImport().catch((error) => {
+                        console.error(error);
+                        setBackupStatus(error.message || 'Import failed.', true);
+                    });
+                });
+            }
+            if (els.forgetKeyBtn) {
+                els.forgetKeyBtn.addEventListener('click', () => {
+                    window.ChatCrypto.clearKeys();
+                    setBackupStatus('Local key cleared. Generate or import to continue.', false);
+                    if (els.keyBackupPassphrase) {
+                        els.keyBackupPassphrase.value = '';
                     }
                 });
-            } else {
-                deleteBtn.style.display = 'none';
             }
         }
 
-        els.conversationClose?.addEventListener('click', hideModal);
-        els.conversationModal?.addEventListener('click', (e) => {
-            if (e.target === els.conversationModal) hideModal();
-        });
-
-        els.confessForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(els.confessForm);
-            formData.append('recipient_id', els.priestSelect.value || '');
-
-            try {
-                const response = await postConfession(formData);
-                if (response.success) {
-                    alert(response.message);
-                    els.confessForm.reset();
-                    loadConfessions();
-                } else {
-                    alert(response.message || 'Failed to submit confession.');
+        if (els.deleteThreadBtn) {
+            els.deleteThreadBtn.addEventListener('click', () => {
+                if (!state.activeThreadId) {
+                    return;
                 }
-            } catch (error) {
-                alert('An error occurred. Please try again.');
-            }
-        });
-
-        els.replyForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!state.activeRecipientId) {
-                alert('Select a conversation to reply.');
-                return;
-            }
-            const formData = new FormData(els.replyForm);
-            formData.append('recipient_id', String(state.activeRecipientId));
-            formData.append('subject', state.activeSubject || 'Follow-up');
-            await postConfession(formData);
-            els.replyForm.reset();
-            loadConfessions();
-        });
-
-        els.modalReplyForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!state.activeReplyConfessionId) return;
-            const payload = {
-                reply_id: state.activeReplyConfessionId,
-                reply_message: els.modalReplyForm.querySelector('textarea').value,
-                end_confession: els.modalReplyForm.querySelector('[name="end_confession"]').checked
-            };
-            await fetchJSON('php/api/reply.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            els.modalReplyForm.reset();
-            hideModal();
-            loadConfessions();
-        });
-    }
-
-    async function populatePriestSelect() {
-        try {
-            const priests = await fetchJSON('php/api/priests.php');
-            els.priestSelect.innerHTML = priests
-                .map(priest => `<option value="${priest.id}">${priest.full_name || priest.username}</option>`)
-                .join('');
-        } catch {
-            els.priestSelect.innerHTML = '<option value="">Unable to load priests</option>';
-        }
-    }
-
-    async function loadConfessions() {
-        els.confessionList.innerHTML = '<p>Loading confessions...</p>';
-        try {
-            const data = await fetchJSON('php/api/confessions.php');
-            els.statTotal.textContent = data.stats.total;
-            els.statAwaiting.textContent = data.stats.awaiting;
-            els.statReplied.textContent = data.stats.replied;
-
-            if (!data.confessions.length) {
-                els.confessionList.innerHTML = '<p>No confessions yet.</p>';
-                els.replyForm.style.display = state.session.role === 'user' ? 'block' : 'none';
-                state.activeRecipientId = null;
-                return;
-            }
-
-            state.messagesByPenitent = {};
-            els.confessionList.innerHTML = '';
-
-            data.confessions.forEach((confession) => {
-                const penitentKey = confession.full_name || confession.username;
-                if (!state.messagesByPenitent[penitentKey]) {
-                    state.messagesByPenitent[penitentKey] = [];
+                const confirmText = 'Are you sure you want to delete this session? This cannot be undone.';
+                if (!window.confirm(confirmText)) {
+                    return;
                 }
-                state.messagesByPenitent[penitentKey].push(confession);
-                renderConfessionEntry(confession);
-            });
-
-            if (state.session.role === 'user') {
-                const last = data.confessions.find((c) => c.recipient_id);
-                if (last) {
-                    setActiveRecipient(last.recipient_id, last.recipient_name || 'your priest', last.subject);
-                }
-            } else if (els.penitentList) {
-                els.penitentList.style.display = 'block';
-                els.penitentItems.innerHTML = Object.keys(state.messagesByPenitent)
-                    .map(name => `<li data-penitent="${name}">${name}</li>`).join('');
-                els.penitentItems.querySelectorAll('li').forEach(item => {
-                    item.addEventListener('click', () => openPenitentModal(item.dataset.penitent));
+                deleteActiveThread().catch((error) => {
+                    showAlert('error', error.message || 'Failed to delete session.');
                 });
-            }
-        } catch {
-            els.confessionList.innerHTML = '<p>Failed to load confessions.</p>';
-        }
-    }
-
-    function renderConfessionEntry(confession) {
-        const isUser = state.session.role === 'user';
-        const container = document.createElement('div');
-        container.className = 'forum-thread';
-        if (confession.resolved) {
-            container.classList.add('resolved');
-            container.style.opacity = '0.8';
+            });
         }
 
-        // User Post
-        const userInitial = (confession.full_name || confession.username || 'U').charAt(0).toUpperCase();
-        const userPostHtml = `
-            <div class="forum-post user">
-                <div class="post-avatar">
-                    <div class="avatar-circle">${userInitial}</div>
-                </div>
-                <div class="post-content-wrapper">
-                    <div class="post-header">
-                        <span class="post-author">${confession.full_name || confession.username}</span>
-                        <span class="post-date">${confession.created_at}</span>
-                    </div>
-                    <span class="post-subject">${confession.subject || 'General'}</span>
-                    <div class="post-body">${confession.plaintext}</div>
-                    <div style="margin-top:5px;">
-                        <span class="badge ${confession.signature_valid ? 'badge-valid' : 'badge-invalid'}">
-                            ${confession.signature_valid ? 'Signature Valid' : 'Signature Invalid'}
-                        </span>
-                        ${confession.resolved ? '<span class="badge" style="background:#333; color:#fff; padding:1px 4px; border-radius:4px; font-size:10px; margin-left:5px;">RESOLVED</span>' : ''}
-                        ${confession.follow_up ? `<p class="meta" style="margin-top:5px; font-style:italic;">Note: ${confession.follow_up}</p>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Priest Reply
-        let priestPostHtml = '';
-        if (confession.reply_text) {
-            priestPostHtml = `
-                <div class="forum-post priest">
-                    <div class="post-avatar">
-                        <div class="avatar-circle">P</div>
-                    </div>
-                    <div class="post-content-wrapper">
-                        <div class="post-header">
-                            <span class="post-author">Priest</span>
-                            <span class="post-date">${confession.reply_at || ''}</span>
-                        </div>
-                        <div class="post-body">${confession.reply_text}</div>
-                    </div>
-                </div>
-            `;
-        } else if (isUser && !confession.resolved) {
-            priestPostHtml = `
-                <div class="forum-post priest" style="opacity:0.6;">
-                    <div class="post-avatar">
-                        <div class="avatar-circle" style="background:#ccc; border-color:#999;">?</div>
-                    </div>
-                    <div class="post-content-wrapper">
-                        <div class="post-body" style="font-style:italic;">Waiting for priest's reply...</div>
-                    </div>
-                </div>
-            `;
-        } else if (!isUser) {
-            // Priest View: Add Action Button
-            priestPostHtml = `
-                <div style="margin-top:10px; text-align:right;">
-                    <button class="action-btn">Reply / View Thread</button>
-                </div>
-            `;
-        }
-
-        container.innerHTML = userPostHtml + priestPostHtml;
-
-        if (state.debugMode) {
-            container.innerHTML += `
-                <div class="debug-block" style="margin:0;">
-                    <strong>Debug Data</strong>
-                    <p><em>Message Hash:</em> ${confession.message_hash}</p>
-                    <p><em>Signature (first 60 chars):</em> ${confession.signature_preview}</p>
-                    <p><em>IV:</em> ${confession.iv}</p>
-                </div>
-            `;
-        }
-
-        container.addEventListener('click', (e) => {
-            // Handle Priest 'Reply / View Thread' button click
-            if (!isUser && e.target.classList.contains('action-btn')) {
-                const penitentName = confession.full_name || confession.username;
-                openPenitentModal(penitentName);
-                return;
-            }
-
-            // Handle User click to set active recipient
-            if (isUser && confession.recipient_id) {
-                // If resolved, do not allow setting as active recipient for reply
-                if (confession.resolved) {
-                    setActiveRecipient(confession.recipient_id, confession.recipient_name || 'your priest', confession.subject, true);
-                } else {
-                    setActiveRecipient(confession.recipient_id, confession.recipient_name || 'your priest', confession.subject, false);
+        if (els.threadList) {
+            els.threadList.addEventListener('click', (event) => {
+                const item = event.target.closest('li[data-thread-id]');
+                if (item) {
+                    const threadId = Number(item.dataset.threadId);
+                    selectThread(threadId);
                 }
-            }
-        });
-
-        els.confessionList.appendChild(container);
-    }
-
-    function setActiveRecipient(id, name, subject, isResolved = false) {
-        state.activeRecipientId = id;
-        state.activeRecipientName = name;
-        state.activeSubject = subject || 'Follow-up';
-
-        if (els.replyTarget) {
-            if (isResolved) {
-                els.replyTarget.textContent = `Conversation with ${name || 'your priest'} is closed.`;
-                els.replyTarget.style.color = '#8c3333';
-            } else {
-                els.replyTarget.textContent = `Replying to ${name || 'your priest'} • Subject: ${state.activeSubject}`;
-                els.replyTarget.style.color = '';
-            }
+            });
         }
 
-        if (els.replyForm) {
-            if (state.session.role === 'user') {
-                els.replyForm.style.display = isResolved ? 'none' : 'block';
-            } else {
-                els.replyForm.style.display = 'none';
-            }
+        if (els.messageForm) {
+            els.messageForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!state.activeThreadId) {
+                    alert('Select a session first.');
+                    return;
+                }
+                const message = els.messageTextarea.value.trim();
+                if (!message) {
+                    alert('Please write a message.');
+                    return;
+                }
+                const resolve = Boolean(els.resolveCheckbox?.checked);
+                setComposerDisabled(true);
+                try {
+                    await sendEncryptedMessage(state.activeThreadId, message, resolve);
+                    els.messageTextarea.value = '';
+                    if (els.resolveCheckbox) els.resolveCheckbox.checked = false;
+                    await loadThreadMessages(state.activeThreadId);
+                    await loadThreads();
+                } catch (error) {
+                    showAlert('error', error.message || 'Failed to send message.');
+                } finally {
+                    setComposerDisabled(false);
+                }
+            });
         }
     }
 
-    async function postConfession(formData) {
-        return await fetchJSON('php/api/confessions.php', {
-            method: 'POST',
-            body: formData,
-        });
-    }
-
-    function openPenitentModal(name) {
-        const messages = state.messagesByPenitent[name] || [];
-        if (!messages.length) {
+    async function handleConfessionSubmit(event) {
+        event.preventDefault();
+        if (!window.ChatCrypto) {
+            showAlert('error', 'Secure chat helper not available.');
             return;
         }
-
-        const lastMessage = messages[messages.length - 1];
-        state.activeReplyConfessionId = lastMessage.id;
-        els.conversationTitle.textContent = name;
-
-        els.conversationBody.innerHTML = messages.map(msg => `
-            <article class="confession-entry" style="${msg.resolved ? 'border-color:#8c3333;' : ''}">
-                <header>
-                    <div>
-                        <span class="author">${msg.full_name || msg.username}</span>
-                        <time>${msg.created_at}</time>
-                    </div>
-                    <div>
-                        <small>${msg.subject || 'General'}</small>
-                        ${msg.resolved ? '<span class="badge" style="background:#8c3333; color:#fff; margin-left:5px;">RESOLVED</span>' : ''}
-                    </div>
-                </header>
-                <div class="bubble">${msg.plaintext}</div>
-                ${msg.reply_text ? `<div class="reply-block"><strong>Reply</strong><div class="bubble">${msg.reply_text}</div><small>${msg.reply_at || ''}</small></div>` : ''}
-            </article>
-        `).join('');
-
-        if (lastMessage.resolved) {
-            els.modalReplyForm.style.display = 'none';
-        } else {
-            els.modalReplyForm.style.display = 'block';
+        const formData = new FormData(els.confessForm);
+        const subject = formData.get('subject')?.toString().trim() ?? '';
+        const priestId = Number(formData.get('priest_id') || formData.get('recipient_id'));
+        const message = formData.get('message')?.toString().trim() ?? '';
+        if (!subject || !priestId || !message) {
+            alert('Complete the form before sending.');
+            return;
         }
-
-        els.conversationModal.classList.add('active');
+        setFormDisabled(els.confessForm, true);
+        try {
+            await window.ChatCrypto.ensureKeyPair({ register: true });
+            const payload = new URLSearchParams();
+            payload.set('subject', subject);
+            payload.set('priest_id', String(priestId));
+            const response = await fetchJSON(API.threads, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: payload.toString(),
+            });
+            if (!response?.thread_id) {
+                throw new Error('Failed to create new thread.');
+            }
+            const threadId = Number(response.thread_id);
+            await loadThreads(true);
+            const createdThread = state.threads.find((t) => t.id === threadId);
+            if (!createdThread) {
+                throw new Error('Thread not found.');
+            }
+            await sendEncryptedMessage(threadId, message, false);
+            els.confessForm.reset();
+            showAlert('success', 'Confession sent securely.');
+            await loadThreadMessages(threadId);
+            selectThread(threadId);
+        } catch (error) {
+            showAlert('error', error.message || 'Unable to send confession.');
+        } finally {
+            setFormDisabled(els.confessForm, false);
+        }
     }
 
-    function hideModal() {
-        els.conversationModal.classList.remove('active');
-        state.activeReplyConfessionId = null;
+    async function loadThreads(force = false) {
+        if (state.loadingThreads && !force) {
+            return;
+        }
+        state.loadingThreads = true;
+        try {
+            const result = await fetchJSON(API.threads);
+            state.threads = result.threads || [];
+            updateStats();
+            renderThreadList();
+            if (!state.activeThreadId && state.threads.length) {
+                selectThread(state.threads[0].id);
+            } else if (state.activeThreadId && force) {
+                selectThread(state.activeThreadId);
+            }
+            if (state.activeThreadId && !state.threads.some((thread) => thread.id === state.activeThreadId)) {
+                setActiveThread(null);
+            }
+            if (!state.threads.length) {
+                setActiveThread(null);
+            }
+        } catch (error) {
+            showAlert('error', error.message || 'Failed to load chat threads.');
+        } finally {
+            state.loadingThreads = false;
+            updateDebugPanel();
+        }
+    }
+
+    function renderThreadList() {
+        if (!els.threadList) {
+            return;
+        }
+        els.threadList.innerHTML = '';
+        const threads = getFilteredThreads();
+        if (!threads.length) {
+            if (els.threadEmpty) {
+                const emptyMessage = els.threadEmpty.querySelector('p');
+                if (emptyMessage) {
+                    emptyMessage.innerHTML = state.threadFilter
+                        ? 'No sessions match your search.<br>Try another subject or partner.'
+                        : 'No conversations yet.<br>Start a confession to see it here.';
+                }
+                els.threadEmpty.style.display = 'block';
+            }
+            return;
+        }
+        if (els.threadEmpty) {
+            els.threadEmpty.style.display = 'none';
+        }
+
+        const fragment = document.createDocumentFragment();
+        threads.forEach((thread) => {
+            const item = document.createElement('li');
+            item.className = 'thread-item';
+            if (thread.id === state.activeThreadId) {
+                item.classList.add('is-active');
+            }
+            item.dataset.threadId = String(thread.id);
+            item.innerHTML = `
+                <div class="thread-primary">
+                    <h4>${escapeHtml(thread.subject)}</h4>
+                    <p class="muted">${escapeHtml(thread.partner.name)}</p>
+                </div>
+                <div class="thread-meta">
+                    <span class="badge ${thread.resolved ? 'badge-muted' : 'badge-live'}">
+                        ${thread.resolved ? 'Closed' : 'Open'}
+                    </span>
+                    <small>${formatTimestamp(thread.updated_at)}</small>
+                </div>
+            `;
+            fragment.appendChild(item);
+        });
+        els.threadList.appendChild(fragment);
+    }
+
+    async function selectThread(threadId) {
+        if (!threadId) {
+            setActiveThread(null);
+            return;
+        }
+        const thread = state.threads.find((t) => t.id === threadId);
+        if (!thread) {
+            showAlert('error', 'Selected thread is no longer available.');
+            setActiveThread(null);
+            return;
+        }
+        await fetchPartnerPublicKey(thread.partner?.id || 0, { forceRefresh: true }).catch(() => {});
+        state.activeThreadId = threadId;
+        renderThreadList();
+        await loadThreadMessages(threadId);
+    }
+
+    async function loadThreadMessages(threadId) {
+        const thread = state.threads.find((t) => t.id === threadId);
+        if (!thread) {
+            showAlert('error', 'Thread not found.');
+            return;
+        }
+        const partnerId = thread.partner?.id || null;
+        if (partnerId) {
+            await fetchPartnerPublicKey(partnerId).catch(() => {});
+        }
+        const partnerKey = partnerId ? getCachedPartnerKey(partnerId) : null;
+        try {
+            const data = await fetchJSON(`${API.messages}?thread_id=${encodeURIComponent(threadId)}`);
+            const decrypted = data.messages.map((message) => {
+                const base = {
+                    id: message.id,
+                    senderId: message.sender_id,
+                    senderName: message.sender_name,
+                    createdAt: message.created_at,
+                    readAt: message.read_at,
+                    senderPublicKey: message.sender_public_key,
+                    recipientPublicKey: message.recipient_public_key,
+                    ciphertext: message.ciphertext_b64,
+                    isSelf: message.sender_id === state.session.user_id,
+                };
+                if (!window.ChatCrypto) {
+                    return { ...base, plaintext: '[Crypto unavailable]', decryptError: true };
+                }
+                const candidates = message.isSelf
+                    ? [message.recipient_public_key, partnerKey, message.sender_public_key]
+                    : [message.sender_public_key, partnerKey, message.recipient_public_key];
+                const result = tryDecryptWithCandidates(message.ciphertext_b64, candidates);
+                if (result.success) {
+                    return {
+                        ...base,
+                        plaintext: result.plaintext,
+                        decryptError: false,
+                        decryptKeyPreview: result.keyPreview,
+                    };
+                }
+                return {
+                    ...base,
+                    plaintext: '[Unable to decrypt]',
+                    decryptError: result.error || true,
+                };
+            });
+            state.messagesByThread.set(threadId, decrypted);
+            renderActiveThread();
+        } catch (error) {
+            showAlert('error', error.message || 'Failed to load conversation.');
+        }
+    }
+
+    function setActiveThread(threadId) {
+        state.activeThreadId = threadId;
+        renderActiveThread();
+    }
+
+    function renderActiveThread() {
+        const thread = state.threads.find((t) => t.id === state.activeThreadId) || null;
+        const messages = state.messagesByThread.get(state.activeThreadId) || [];
+        if (!thread) {
+            setChatHeaderDefault();
+        } else {
+            updateChatHeader(thread, messages);
+        }
+        renderMessages(messages);
+        updateDebugPanel(thread, messages);
+        toggleDeleteButton(Boolean(thread));
+    }
+
+    function setChatHeaderDefault() {
+        if (els.activePartner) els.activePartner.textContent = 'Select a session';
+        if (els.activeSubject) els.activeSubject.textContent = 'No conversation selected';
+        if (els.activeStatus) els.activeStatus.textContent = 'Choose a subject to view the secure chat.';
+        if (els.statusPill) {
+            els.statusPill.textContent = 'Idle';
+            els.statusPill.className = 'status-pill';
+        }
+        if (els.closedBanner) els.closedBanner.style.display = 'none';
+        if (els.messageForm) els.messageForm.style.display = 'none';
+        if (els.sessionInspector) els.sessionInspector.style.display = 'none';
+        if (els.inspectorPartner) els.inspectorPartner.textContent = '—';
+        if (els.inspectorSubject) els.inspectorSubject.textContent = '—';
+        if (els.inspectorStatus) els.inspectorStatus.textContent = '—';
+        if (els.inspectorUpdated) els.inspectorUpdated.textContent = '—';
+        toggleDeleteButton(false);
+    }
+
+    function updateChatHeader(thread, messages) {
+        if (els.activePartner) {
+            els.activePartner.textContent = thread.partner ? thread.partner.name : 'Conversation';
+        }
+        if (els.activeSubject) {
+            els.activeSubject.textContent = thread.subject;
+        }
+        const lastMessage = messages[messages.length - 1];
+        const waitingFor = lastMessage
+            ? (lastMessage.isSelf ? 'Awaiting other party' : 'Awaiting your reply')
+            : 'No messages yet.';
+        if (els.activeStatus) {
+            els.activeStatus.textContent = thread.resolved ? 'Resolved session' : waitingFor;
+        }
+        if (els.statusPill) {
+            els.statusPill.textContent = thread.resolved ? 'Resolved' : 'Active';
+            els.statusPill.className = `status-pill ${thread.resolved ? 'closed' : 'active'}`;
+        }
+        if (els.closedBanner) {
+            els.closedBanner.style.display = thread.resolved ? 'block' : 'none';
+        }
+        if (els.messageForm) {
+            els.messageForm.style.display = thread.resolved ? 'none' : 'block';
+        }
+        if (els.sessionInspector) {
+            els.sessionInspector.style.display = 'grid';
+        }
+        if (els.inspectorPartner) {
+            els.inspectorPartner.textContent = thread.partner ? thread.partner.name : '—';
+        }
+        if (els.inspectorSubject) {
+            els.inspectorSubject.textContent = thread.subject || '—';
+        }
+        if (els.inspectorStatus) {
+            els.inspectorStatus.textContent = thread.resolved ? 'Closed' : 'Active';
+        }
+        if (els.inspectorUpdated) {
+            els.inspectorUpdated.textContent = formatTimestamp(thread.updated_at);
+        }
+    }
+
+    function renderMessages(messages) {
+        if (!els.chatMessages) {
+            return;
+        }
+        if (!messages.length) {
+            els.chatMessages.innerHTML = '<p class="muted">Nothing to show yet.</p>';
+            return;
+        }
+        els.chatMessages.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        messages.forEach((message) => {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${message.isSelf ? 'is-self' : 'is-partner'}`;
+            const ciphertextPreview = message.ciphertext ? `${escapeHtml(message.ciphertext.slice(0, 28))}…` : 'n/a';
+            const senderKeyPreview = message.senderPublicKey
+                ? `${escapeHtml(message.senderPublicKey.slice(0, 18))}…`
+                : 'n/a';
+            const recipientKeyPreview = message.recipientPublicKey
+                ? `${escapeHtml(message.recipientPublicKey.slice(0, 18))}…`
+                : 'n/a';
+            const readState = message.readAt ? formatTimestamp(message.readAt) : 'Not read';
+            const decryptState = message.decryptError
+                ? escapeHtml(typeof message.decryptError === 'string' ? message.decryptError : 'Decryption failed')
+                : `OK (${message.decryptKeyPreview || 'n/a'})`;
+            bubble.innerHTML = `
+                <div class="bubble-meta">
+                    <strong>${escapeHtml(message.senderName)}</strong>
+                    <span>${formatTimestamp(message.createdAt)}</span>
+                </div>
+                <p>${escapeHtml(message.plaintext)}</p>
+                ${state.debugMode ? `<div class="bubble-debug-grid">
+                    <div><span>ID</span>${message.id}</div>
+                    <div><span>Sender Key</span>${senderKeyPreview}</div>
+                    <div><span>Recipient Key</span>${recipientKeyPreview}</div>
+                    <div><span>Read</span>${readState}</div>
+                    <div><span>Ciphertext</span>${ciphertextPreview}</div>
+                    <div><span>Decrypt</span>${decryptState}</div>
+                </div>` : ''}
+            `;
+            fragment.appendChild(bubble);
+        });
+        els.chatMessages.appendChild(fragment);
+        els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+    }
+
+    async function sendEncryptedMessage(threadId, plaintext, resolve) {
+        if (!window.ChatCrypto) {
+            throw new Error('Crypto helper missing.');
+        }
+        const thread = state.threads.find((t) => t.id === threadId);
+        if (!thread) {
+            throw new Error('Thread not found.');
+        }
+        const partnerId = thread.partner?.id;
+        if (!partnerId) {
+            throw new Error('Partner ID missing for this thread.');
+        }
+        const partnerKey = await fetchPartnerPublicKey(partnerId, { forceRefresh: true });
+        if (!partnerKey) {
+            throw new Error('Partner has not registered a secure chat key yet.');
+        }
+        const payload = window.ChatCrypto.encryptMessage(plaintext, partnerKey);
+        const body = {
+            thread_id: threadId,
+            ciphertext_b64: payload.ciphertextB64,
+            sender_public_key: payload.senderPublicKey,
+            recipient_public_key: payload.recipientPublicKey,
+            resolve,
+        };
+        await fetchJSON(API.messages, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        updateDebugPanel();
+    }
+
+    function getCachedPartnerKey(userId) {
+        const entry = state.keyCache.get(userId);
+        if (entry && typeof entry === 'object') {
+            return entry.publicKey || null;
+        }
+        if (typeof entry === 'string') {
+            return entry;
+        }
+        return null;
+    }
+
+    async function fetchPartnerPublicKey(userId, options = {}) {
+        const { forceRefresh = false } = options;
+        if (!userId) {
+            return null;
+        }
+        const cached = state.keyCache.get(userId);
+        if (cached && !forceRefresh) {
+            return typeof cached === 'string' ? cached : cached.publicKey || null;
+        }
+        const params = new URLSearchParams();
+        params.append('user_id', String(userId));
+        try {
+            const response = await fetchJSON(`${API.keyring}?${params.toString()}`);
+            const record = response?.keys?.find?.((key) => key.user_id === userId);
+            if (record?.public_key) {
+                state.keyCache.set(userId, {
+                    publicKey: record.public_key,
+                    updatedAt: record.updated_at || null,
+                });
+                updateDebugPanel();
+                return record.public_key;
+            }
+        } catch (error) {
+            if (cached && !forceRefresh) {
+                return typeof cached === 'string' ? cached : cached.publicKey || null;
+            }
+            throw error;
+        }
+        if (cached) {
+            return typeof cached === 'string' ? cached : cached.publicKey || null;
+        }
+        return null;
+    }
+
+    async function populatePriests() {
+        if (!els.priestSelect) return;
+        try {
+            const priests = await fetchJSON(API.priests);
+            if (!priests.length) {
+                els.priestSelect.innerHTML = '<option value="">No priests available</option>';
+                return;
+            }
+            const options = priests.map(
+                (priest) => `<option value="${priest.id}">${escapeHtml(priest.full_name || priest.username)}</option>`,
+            ).join('');
+            els.priestSelect.innerHTML = `<option value="">Select a priest</option>${options}`;
+        } catch (error) {
+            console.error(error);
+            els.priestSelect.innerHTML = '<option value="">Failed to load priests</option>';
+        }
+    }
+
+    function updateStats() {
+        if (state.session.role !== 'priest') {
+            return;
+        }
+        const total = state.threads.length;
+        const closed = state.threads.filter((thread) => thread.resolved).length;
+        const open = total - closed;
+        if (els.statTotal) els.statTotal.textContent = total.toString();
+        if (els.statAwaiting) els.statAwaiting.textContent = open.toString();
+        if (els.statReplied) els.statReplied.textContent = closed.toString();
+    }
+
+    function fetchJSON(url, options = {}) {
+        return fetch(url, {
+            credentials: 'same-origin',
+            ...options,
+        }).then(async (response) => {
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+                const message = data?.message || `Request to ${url} failed.`;
+                throw new Error(message);
+            }
+            return data;
+        });
+    }
+
+    function toggleDeleteButton(visible) {
+        if (!els.deleteThreadBtn) return;
+        els.deleteThreadBtn.style.display = visible ? 'inline-block' : 'none';
+    }
+
+    async function deleteActiveThread() {
+        const threadId = state.activeThreadId;
+        if (!threadId) {
+            throw new Error('No session selected.');
+        }
+        const response = await fetch(API.threads, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thread_id: threadId }),
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok || json?.success === false) {
+            throw new Error(json?.message || 'Failed to delete session.');
+        }
+        state.messagesByThread.delete(threadId);
+        state.threads = state.threads.filter((thread) => thread.id !== threadId);
+        state.activeThreadId = null;
+        renderThreadList();
+        setActiveThread(null);
+        showAlert('success', 'Session deleted.');
+    }
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        if (!state.autoRefreshEnabled) {
+            return;
+        }
+        state.autoRefreshTimer = window.setInterval(() => {
+            if (document.hidden || state.loadingThreads) {
+                return;
+            }
+            loadThreads(true);
+        }, state.autoRefreshInterval);
+    }
+
+    function stopAutoRefresh() {
+        if (state.autoRefreshTimer) {
+            clearInterval(state.autoRefreshTimer);
+            state.autoRefreshTimer = null;
+        }
+    }
+
+    function getBackupPassphrase() {
+        return els.keyBackupPassphrase?.value || '';
+    }
+
+    function setBackupStatus(message, isError = false) {
+        if (!els.keyBackupStatus) return;
+        els.keyBackupStatus.textContent = message;
+        els.keyBackupStatus.style.color = isError ? '#8c3333' : '#5e4533';
+    }
+
+    function setBackupBusy(busy) {
+        [els.exportKeyBtn, els.importKeyBtn, els.forgetKeyBtn].forEach((btn) => {
+            if (btn) {
+                // eslint-disable-next-line no-param-reassign
+                btn.disabled = busy;
+            }
+        });
+    }
+
+    async function handleKeyExport() {
+        if (!window.ChatCrypto) {
+            throw new Error('Crypto helper unavailable.');
+        }
+        setBackupBusy(true);
+        setBackupStatus('Preparing backup...');
+        try {
+            const backup = await window.ChatCrypto.exportKey({ passphrase: getBackupPassphrase() });
+            const identifier = (state.session?.username || state.session?.full_name || 'user')
+                .replace(/[^a-z0-9_-]+/gi, '_');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `confession-key-${identifier}-${timestamp}.json`;
+            window.ChatCrypto.downloadBackup(backup, filename);
+            setBackupStatus('Key exported. Store the file securely.');
+        } finally {
+            setBackupBusy(false);
+        }
+    }
+
+    async function handleKeyImport() {
+        if (!window.ChatCrypto) {
+            throw new Error('Crypto helper unavailable.');
+        }
+        const file = els.importKeyInput?.files?.[0];
+        if (!file) {
+            return;
+        }
+        setBackupBusy(true);
+        setBackupStatus('Importing backup...');
+        try {
+            const backup = await window.ChatCrypto.readBackupFile(file);
+            await window.ChatCrypto.importKey(backup, { passphrase: getBackupPassphrase(), register: true });
+            setBackupStatus('Key imported and registered. You can now read past sessions.');
+        } finally {
+            setBackupBusy(false);
+            if (els.importKeyInput) {
+                els.importKeyInput.value = '';
+            }
+        }
+    }
+
+    function setComposerDisabled(disabled) {
+        if (!els.messageForm) {
+            return;
+        }
+        const elements = els.messageForm.querySelectorAll('textarea, button, input');
+        elements.forEach((node) => {
+            // eslint-disable-next-line no-param-reassign
+            node.disabled = disabled;
+        });
+    }
+
+    function setFormDisabled(form, disabled) {
+        if (!form) return;
+        const nodes = form.querySelectorAll('input, select, textarea, button');
+        nodes.forEach((node) => {
+            // eslint-disable-next-line no-param-reassign
+            node.disabled = disabled;
+        });
+    }
+
+    function formatTimestamp(value) {
+        if (!value) return '';
+        const date = new Date(value.replace(' ', 'T'));
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        return date.toLocaleString(undefined, {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            month: 'short',
+            day: 'numeric',
+        });
+    }
+
+    function escapeHtml(str) {
+        if (typeof str !== 'string') {
+            return str;
+        }
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function getFilteredThreads() {
+        if (!state.threadFilter) {
+            return state.threads;
+        }
+        const term = state.threadFilter.toLowerCase();
+        return state.threads.filter((thread) => {
+            const subject = (thread.subject || '').toLowerCase();
+            const partner = (thread.partner?.name || '').toLowerCase();
+            return subject.includes(term) || partner.includes(term);
+        });
+    }
+
+    function tryDecryptWithCandidates(ciphertext, candidates) {
+        const tried = [];
+        for (const candidate of candidates) {
+            if (!candidate) {
+                continue;
+            }
+            try {
+                const plaintext = window.ChatCrypto.decryptMessage(ciphertext, candidate);
+                return {
+                    success: true,
+                    plaintext,
+                    keyPreview: `${candidate.slice(0, 16)}…`,
+                };
+            } catch (error) {
+                tried.push(error.message);
+            }
+        }
+        const message = tried.length ? tried.join(' | ') : 'No valid key';
+        return { success: false, error: message };
+    }
+
+    function updateDebugPanel(thread = null, messages = null) {
+        if (!els.debugPanel || !els.debugPanelBody) {
+            return;
+        }
+        if (!state.debugMode) {
+            els.debugPanel.style.display = 'none';
+            els.debugPanelBody.textContent = '';
+            return;
+        }
+        const activeThread = thread ?? (state.threads.find((t) => t.id === state.activeThreadId) || null);
+        const messageList = messages ?? (state.activeThreadId
+            ? state.messagesByThread.get(state.activeThreadId) || []
+            : []);
+        const localKeyPair = window.ChatCrypto?.getKeyPair?.() || null;
+        const partnerId = activeThread?.partner?.id ?? null;
+        const cachedPartnerRecord = partnerId ? state.keyCache.get(partnerId) || null : null;
+        let partnerKeyPreview = null;
+        let partnerKeyUpdatedAt = null;
+        if (cachedPartnerRecord) {
+            const keyValue = typeof cachedPartnerRecord === 'string'
+                ? cachedPartnerRecord
+                : cachedPartnerRecord.publicKey;
+            if (keyValue) {
+                partnerKeyPreview = `${keyValue.slice(0, 24)}…`;
+            }
+            if (typeof cachedPartnerRecord === 'object') {
+                partnerKeyUpdatedAt = cachedPartnerRecord.updatedAt || null;
+            }
+        }
+        const payload = {
+            session: {
+                user_id: state.session?.user_id ?? null,
+                role: state.session?.role ?? null,
+                authenticated: Boolean(state.session),
+            },
+            localKey: localKeyPair
+                ? {
+                    publicKeyPreview: `${localKeyPair.publicKey.slice(0, 24)}…`,
+                    privateKeyLength: localKeyPair.privateKey.length,
+                }
+                : 'No local key pair present',
+            thread: activeThread
+                ? {
+                    id: activeThread.id,
+                    subject: activeThread.subject,
+                    partner: activeThread.partner,
+                    resolved: activeThread.resolved,
+                    updated_at: activeThread.updated_at,
+                }
+                : null,
+            partnerKeyPreview,
+            partnerKeyUpdatedAt,
+            metrics: {
+                totalThreads: state.threads.length,
+                filteredThreads: getFilteredThreads().length,
+                messageCount: messageList.length,
+            },
+            lastMessage: messageList.length
+                ? {
+                    id: messageList[messageList.length - 1].id,
+                    senderId: messageList[messageList.length - 1].senderId,
+                    readAt: messageList[messageList.length - 1].readAt,
+                }
+                : null,
+        };
+        els.debugPanelBody.textContent = JSON.stringify(payload, null, 2);
+        els.debugPanel.style.display = 'block';
+    }
+
+    function showAlert(type, message) {
+        if (!els.alertArea || !message) {
+            return;
+        }
+        const color = type === 'success' ? '#2f684e' : '#8c3333';
+        els.alertArea.innerHTML = `
+            <div class="alert" style="background: rgba(255,255,255,0.8); border:1px solid ${color}; padding:12px; border-radius:6px; margin-bottom:15px; color:${color};">
+                ${escapeHtml(message)}
+            </div>
+        `;
+        setTimeout(() => {
+            if (els.alertArea) {
+                els.alertArea.innerHTML = '';
+            }
+        }, 5000);
     }
 })();

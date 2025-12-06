@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cipher": "AES-256-CBC",
+  "kdf": "PBKDF2-HMAC-SHA256",
+  "iterations": 120000,
+  "publicKey": "04223da4359abcb95c6e77cb3e17ce64366bba626e06ac45cbcaadcdb5053be94e3b95d68456ae19aabd56f68387aefce30d1c33a95813d5db9445f4c21ac4593f",
+  "wrappedPrivateKey": "UdPLVyN9ZikXxdDASgTPzjv1yiW0oFyBcac92OJnL0rKYqK6BIckpxyWLgruJR+CIt3bl2wlzi9vwiG+IE0FXlosXxPkOmXbEa1Hv1Dcu78=",
+  "iv": "c430a8902a5282ea643935cbbf386da6",
+  "salt": "21cff8fb54685378c412c0c0bdbaf258",
+  "createdAt": "2025-12-06T13:03:01.561Z"
+}

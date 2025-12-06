@@ -11,6 +11,9 @@
     <link rel="manifest" href="assets/favicon/site.webmanifest">
     <link rel="shortcut icon" href="assets/favicon/favicon.ico">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/elliptic/6.5.4/elliptic.min.js" defer></script>
+    <script src="js/chat-crypto.js" defer></script>
     <script src="index.js" defer></script>
     <script src="js/confession.js" defer></script>
 </head>
@@ -103,6 +106,45 @@
                         <input type="checkbox" id="debug-toggle">
                         Show cryptographic debug data
                     </label>
+                    <div style="margin-top:10px; padding:10px; background:#fff9ee; border:1px solid #e0cda5; border-radius:6px;">
+                        <p id="key-status-text" style="margin:0 0 8px; font-size:13px; color:#5e4533;">Checking secure key…</p>
+                        <button id="generate-chat-key"
+                            style="font-size:13px; padding:6px 12px; border:1px solid #8c7348; background:#fdf5e6; color:#5e4533; cursor:pointer; border-radius:4px;">
+                            Generate Secure Key
+                        </button>
+                        <p style="margin:8px 0 0; font-size:12px; color:#a08c6a;">
+                            Keys stay on this device and only the public key is registered with the server.
+                            If a message shows <em>[Unable to decrypt]</em>, click “Regenerate Secure Key,” then ask your partner to do the same before resending.
+                        </p>
+                    </div>
+                    <div class="key-backup-panel" style="margin-top:12px; padding:12px; border:1px solid #e0cda5; border-radius:6px; background:#fff7ea;">
+                        <h4 style="margin:0 0 8px; font-size:13px; color:#5e4533; font-family:'Cinzel', serif;">Key Backup</h4>
+                        <p style="margin:0 0 10px; font-size:12px; color:#7a6147;">
+                            Export your private key once and import it on another device to read the same sessions. Keep the file safe.
+                        </p>
+                        <label style="display:block; font-size:12px; color:#5e4533; margin-bottom:6px;">
+                            Optional passphrase
+                            <input type="password" id="key-backup-passphrase"
+                                placeholder="Enter passphrase for export/import"
+                                style="width:100%; margin-top:4px; padding:6px; border:1px solid #d4c5b0; border-radius:4px; background:#fffdf5; font-family:'PT Sans', sans-serif;">
+                        </label>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <button type="button" id="export-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #5e4533; background:#fdf5e6; color:#5e4533; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Export Key
+                            </button>
+                            <button type="button" id="import-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #8c7348; background:#fff; color:#5e4533; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Import Key
+                            </button>
+                            <button type="button" id="forget-key-btn"
+                                style="flex:1; min-width:140px; padding:8px 10px; border:1px solid #d87b6b; background:#fff5f2; color:#8c3333; border-radius:4px; font-size:13px; cursor:pointer;">
+                                Forget Key
+                            </button>
+                        </div>
+                        <input type="file" id="import-key-file" accept="application/json" style="display:none;">
+                        <p id="key-backup-status" style="margin:8px 0 0; font-size:11px; color:#7a6147;">No backup activity yet.</p>
+                    </div>
                     <button id="delete-all-btn"
                         style="display:none; margin-top:8px; background:none; border:none; color:#8c3333; font-size:13px; cursor:pointer; text-decoration:underline; padding:0; font-family:inherit;">
                         Delete All Confessions
@@ -121,7 +163,7 @@
                 <form id="confess-form">
                     <label style="display:block; margin-bottom:10px; font-weight:bold; color:#3e2b1e;">
                         Choose Priest
-                        <select id="priest-select" required
+                        <select id="priest-select" name="priest_id" required
                             style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5; font-family: 'PT Sans', sans-serif;">
                             <option value="">Loading priests...</option>
                         </select>
@@ -157,34 +199,100 @@
                 </div>
             </section>
 
-            <section class="chat-sidebar" id="penitent-list" style="display:none; margin-bottom: 30px;">
-                <h3>Penitents</h3>
-                <ul id="penitent-items"></ul>
-            </section>
-
-
             <section class="card chat-card"
                 style="background: rgba(255,255,255,0.6); padding: 20px; border: 1px solid #d4c5b0;">
-                <h2 id="list-title"
-                    style="font-family: 'Cinzel', serif; color: #3e2b1e; border-bottom: 1px solid #d4c5b0; padding-bottom: 10px; margin-bottom: 15px;">
-                    Confession History</h2>
-                <div id="confession-list" class="confession-list">
-                    <p>Loading confessions...</p>
+                <div class="chat-layout">
+                    <aside class="chat-sidebar">
+                        <div class="thread-bar">
+                            <h3>Sessions</h3>
+                            <button type="button" class="refresh-btn" id="refresh-threads">Refresh</button>
+                        </div>
+                        <div class="thread-search">
+                            <input type="text" id="thread-search" placeholder="Search by subject or partner"
+                                style="width:100%; padding:8px 10px; border:1px solid #d4c5b0; border-radius:4px; background:#fffdf5; font-family:'PT Sans', sans-serif; font-size:13px;">
+                        </div>
+                        <div class="auto-refresh-panel" style="margin:10px 0 15px; padding:10px; border:1px dashed #d7c3a2; border-radius:6px; background:#fffaf0;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#5e4533;">
+                                <input type="checkbox" id="auto-refresh-toggle">
+                                Auto refresh messages
+                            </label>
+                            <label style="display:block; margin-top:6px; font-size:12px; color:#7a6147;">
+                                Interval
+                                <select id="auto-refresh-interval" style="width:100%; margin-top:4px; padding:6px; border:1px solid #d4c5b0; background:#fffdf5; font-family:'PT Sans', sans-serif;">
+                                    <option value="5000">5 seconds</option>
+                                    <option value="10000" selected>10 seconds</option>
+                                    <option value="15000">15 seconds</option>
+                                    <option value="30000">30 seconds</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div id="thread-empty" class="thread-empty" style="display:none;">
+                            <p>No conversations yet.<br>Start a confession to see it here.</p>
+                        </div>
+                        <ul id="thread-list" class="thread-list"></ul>
+                    </aside>
+                    <section class="chat-panel">
+                        <header class="chat-panel-header">
+                            <div>
+                                <p class="pretitle" id="active-partner">Select a session</p>
+                                <h3 id="active-subject">No conversation selected</h3>
+                                <p class="muted" id="active-status">Choose a subject to view the secure chat.</p>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span class="status-pill" id="thread-status-pill">Idle</span>
+                                <button type="button" id="delete-thread-btn"
+                                    style="display:none; padding:6px 10px; border:1px solid #8c3333; background:#fff5f2; color:#8c3333; border-radius:4px; font-size:12px; cursor:pointer;">
+                                    Delete Session
+                                </button>
+                            </div>
+                        </header>
+                        <div class="session-meta-grid" id="session-inspector" style="display:none;">
+                            <div>
+                                <span class="muted-label">Partner</span>
+                                <strong id="inspector-partner">—</strong>
+                            </div>
+                            <div>
+                                <span class="muted-label">Subject</span>
+                                <strong id="inspector-subject">—</strong>
+                            </div>
+                            <div>
+                                <span class="muted-label">Updated</span>
+                                <strong id="inspector-updated">—</strong>
+                            </div>
+                            <div>
+                                <span class="muted-label">Status</span>
+                                <strong id="inspector-status">—</strong>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <p class="muted">Nothing to show yet.</p>
+                        </div>
+                        <div class="chat-closed" id="chat-closed-banner" style="display:none;">
+                            This session has been closed. If you see [Unable to decrypt], the key has expired. Go to advanced tab.
+                        </div>
+                        <p class="muted" style="font-size:12px; margin:10px 0;">
+                            Trouble decrypting? Expand the <strong>advanced</strong> panel above to regenerate or import your secure key.
+                        </p>
+                        <form id="message-form" class="chat-composer" style="display:none;">
+                            <label style="display:block; font-weight:bold; color:#3e2b1e;">
+                                Your Message
+                                <textarea name="message" rows="4" required
+                                    style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;"></textarea>
+                            </label>
+                            <label class="resolve-toggle" style="display:flex; align-items:center; gap:0.5rem; color:#5e4533; font-size:14px;">
+                                <input type="checkbox" name="resolve">
+                                Mark this session as resolved after sending
+                            </label>
+                            <div style="text-align:right; margin-top:10px;">
+                                <button type="submit" class="login-btn">Send Secure Message</button>
+                            </div>
+                        </form>
+                        <div id="debug-panel" class="debug-panel" style="display:none;">
+                            <h4>Debug channel</h4>
+                            <pre id="debug-panel-body"></pre>
+                        </div>
+                    </section>
                 </div>
-                <form id="reply-form" style="display:none; margin-top:20px;">
-                    <p class="muted" id="reply-target" style="margin-bottom:10px;">Select a conversation to reply.
-                    </p>
-                    <label style="display:block; margin-bottom:10px; font-weight:bold; color:#3e2b1e;">
-                        Reply
-                        <textarea name="message" rows="4" required
-                            style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;"></textarea>
-                    </label>
-                    <label style="display:flex; align-items:center; gap:0.5rem; color:#5e4533; font-size:14px;">
-                        <input type="checkbox" name="end_confession">
-                        Close conversation after this reply
-                    </label>
-                    <button type="submit" class="login-btn">Send Reply</button>
-                </form>
             </section>
             <!-- </div> -->
         </main>
@@ -206,26 +314,6 @@
             cryptography project by UAJY Students 2025/2026</p>
     </footer>
 
-    <!-- Penitent Conversation Modal -->
-    <div class="modal-overlay" id="conversationModal">
-        <div class="modal-content">
-            <div class="modal-close" id="conversationClose">×</div>
-            <h2 class="modal-title" id="conversationTitle">Penitent</h2>
-            <div class="modal-body" id="conversationBody">...</div>
-            <form id="modal-reply-form" style="display:none; margin-top:15px;">
-                <label style="display:block; font-weight:bold; color:#3e2b1e; margin-bottom:6px;">
-                    Reply
-                    <textarea name="reply_message" rows="4" required
-                        style="width:100%; padding:10px; margin-top:5px; border:1px solid #8c7348; background:#fffdf5;"></textarea>
-                </label>
-                <label style="display:flex; align-items:center; gap:0.5rem; color:#5e4533; font-size:14px;">
-                    <input type="checkbox" name="end_confession">
-                    Close conversation after this reply
-                </label>
-                <button type="submit" class="login-btn">Send Reply</button>
-            </form>
-        </div>
-    </div>
 </body>
 
 </html>

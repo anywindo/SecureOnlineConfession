@@ -16,10 +16,28 @@ $action = $_POST['action'] ?? '';
 
 try {
     switch ($action) {
+        case 'fetch_schema':
+            $tables = ['users', 'chat_threads', 'chat_messages', 'chat_keys'];
+            $schema = [];
+            foreach ($tables as $table) {
+                $stmt = $pdo->query("DESCRIBE `$table`");
+                $columns = [];
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $columns[] = [
+                        'name' => $row['Field'],
+                        'type' => $row['Type'],
+                        'key' => $row['Key'],
+                    ];
+                }
+                $schema[] = ['name' => $table, 'columns' => $columns];
+            }
+            echo json_encode(['success' => true, 'tables' => $schema]);
+            break;
+
         case 'fetch_data':
             $table = $_POST['table'] ?? '';
-            // Whitelist tables to prevent SQL injection via table name
-            $allowed_tables = ['users', 'confessions'];
+    // Whitelist tables to prevent SQL injection via table name
+    $allowed_tables = ['users', 'chat_threads', 'chat_messages', 'chat_keys'];
             
             if (!in_array($table, $allowed_tables)) {
                 throw new Exception("Invalid table name.");
@@ -36,7 +54,7 @@ try {
             $table = $_POST['table'] ?? '';
             $id = $_POST['id'] ?? 0;
             
-            $allowed_tables = ['users', 'confessions'];
+            $allowed_tables = ['users', 'chat_threads', 'chat_messages', 'chat_keys'];
             if (!in_array($table, $allowed_tables)) {
                 throw new Exception("Invalid table name.");
             }
@@ -56,7 +74,7 @@ try {
             $id = $_POST['id'] ?? 0;
             $data = json_decode($_POST['data'] ?? '{}', true);
 
-            $allowed_tables = ['users', 'confessions'];
+            $allowed_tables = ['users', 'chat_threads', 'chat_messages', 'chat_keys'];
             if (!in_array($table, $allowed_tables)) {
                 throw new Exception("Invalid table name.");
             }
@@ -107,6 +125,43 @@ try {
                 echo json_encode(['success' => true, 'data' => $data]);
             } else {
                 echo json_encode(['success' => true, 'message' => 'Query executed successfully.']);
+            }
+            break;
+
+        case 'run_test':
+            $test = $_POST['test'] ?? '';
+            $baseDir = realpath(__DIR__ . '/../..');
+            if (!$baseDir) {
+                throw new Exception('Unable to resolve project root.');
+            }
+
+            $phpBin = '/Applications/XAMPP/xamppfiles/bin/php';
+
+            if ($test === 'workflow') {
+                $script = $baseDir . '/tests/workflow_smoke.php';
+                if (!file_exists($script)) {
+                    throw new Exception('workflow_smoke.php is missing.');
+                }
+                $output = shell_exec(escapeshellcmd($phpBin) . ' ' . escapeshellarg($script) . ' 2>&1');
+                echo json_encode(['success' => true, 'output' => $output ?: 'No output']);
+            } elseif ($test === 'db') {
+                $script = $baseDir . '/php/test_db.php';
+                if (!file_exists($script)) {
+                    throw new Exception('test_db.php is missing.');
+                }
+                $output = shell_exec(escapeshellcmd($phpBin) . ' ' . escapeshellarg($script) . ' 2>&1');
+                echo json_encode(['success' => true, 'output' => $output ?: 'No output']);
+            } elseif ($test === 'integrity') {
+                $target = $baseDir . '/php/api/chat/inbox.php';
+                if (!file_exists($target)) {
+                    throw new Exception('chat inbox endpoint is missing.');
+                }
+                $code = 'session_start(); $_SESSION["user_id"]=1; require "' . addslashes($target) . '";';
+                $cmd = 'PHP_SESSION_ACTIVE=1 ' . escapeshellcmd($phpBin) . ' -r ' . escapeshellarg($code) . ' 2>&1';
+                $output = shell_exec($cmd);
+                echo json_encode(['success' => true, 'output' => $output ?: 'No output']);
+            } else {
+                throw new Exception('Unknown test');
             }
             break;
 

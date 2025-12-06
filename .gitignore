@@ -1,2 +1,4 @@
 PROJECT_BLUEPRINT.md
 USER_TESTING_CHECKLIST.md
+node_modules/
+.DS_Store

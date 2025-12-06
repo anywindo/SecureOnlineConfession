@@ -40,7 +40,7 @@ PHP 8.2 / MySQL demo app that showcases the four foundational cryptography servi
 
 ## Testing & Verification
 - **DB Probe:** `php php/test_db.php` returns current DB + server time.
-- **Automated Workflow Smoke:** `php tests/workflow_smoke.php` registers a temporary penitent and priest, creates a confession, encrypts a reply, verifies hashes/signatures, and cleans up.
+- **Automated Workflow Smoke:** `php tests/workflow_smoke.php` registers a temporary penitent and priest, creates a confession, encrypts a reply, verifies hashes/signatures, and then rolls back the transaction so the database stays unchanged.
 - **Manual Verification Checklist:**
   1. Register a Penitent and a Priest (invite code `HOLY-ACCESS`), then log in as the Penitent and submit a confession.
   2. Log out, log back in as the Priest, review the entry, confirm the “Signature Valid” badge, and send an encrypted reply.
